@@ -1,0 +1,121 @@
+# ---
+# kind: pipeline
+# type: kubernetes
+# name: test-deploy-roma-web
+
+# trigger:
+#   branch:
+#     - test
+#   event:
+#     - push
+
+# steps:
+#   - name: build docker image
+#     image: plugins/docker
+#     settings:
+#       dockerfile: Dockerfile
+#       context: .
+#       repo: registry.cn-hongkong.aliyuncs.com/binrc/roma-web
+#       registry: registry.cn-hongkong.aliyuncs.com
+#       tags:
+#         - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+#         - ${DRONE_BRANCH}-${DRONE_BUILD_NUMBER}
+#         - latest
+#       username:
+#         from_secret: docker_username
+#       password:
+#         from_secret: docker_password
+#       build_args:
+#         - BUILD_MODE=test
+
+#   - name: deploy to test
+#     image: registry.cn-hongkong.aliyuncs.com/binrcbase/kubectl
+#     environment:
+#       KUBECONFIG:
+#         from_secret: kubeconfig_data
+#       HOME: /root
+#       IMAGE_TAG: ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+#       NAMESPACE: roma-test
+#       DOMAIN: roma-test.binrc.com
+#     commands:
+#       - echo "$KUBECONFIG" > /drone/src/kubeconfig
+#       - sed -e "s|roma-web:latest|roma-web:$IMAGE_TAG|g" -e "s|roma-test|$NAMESPACE|g" -e "s|web-test.meshwise.cn|$DOMAIN|g" deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.deploy.yaml
+#       - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.deploy.yaml -n $NAMESPACE
+#       - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE
+
+---
+kind: pipeline
+type: kubernetes
+name: prod-deploy-roma-web
+
+trigger:
+  event:
+    - tag
+
+steps:
+  - name: build docker image
+    image: plugins/docker
+    settings:
+      dockerfile: Dockerfile
+      context: .
+      repo: registry.cn-hongkong.aliyuncs.com/binrc/roma-web
+      registry: registry.cn-hongkong.aliyuncs.com
+      tags:
+        - ${DRONE_TAG}
+        - latest
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      build_args:
+        - BUILD_MODE=prod
+  
+  - name: deploy to demo
+    image: registry.cn-hongkong.aliyuncs.com/binrcbase/kubectl
+    environment:
+      KUBECONFIG:
+        from_secret: kubeconfig_data
+      HOME: /root
+      IMAGE_TAG: ${DRONE_TAG}
+      NAMESPACE: demo
+      DOMAIN: roma-demo.binrc.com
+    commands:
+      - echo "$KUBECONFIG" > /drone/src/kubeconfig
+      - sed -e "s|roma-web:latest|roma-web:$IMAGE_TAG|g" -e "s|roma-demo|$NAMESPACE|g" -e "s|roma-demo.binrc.com|$DOMAIN|g" deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.demo.yaml
+      - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.demo.yaml -n $NAMESPACE
+      - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE
+
+  - name: deploy to prod
+    image: registry.cn-hongkong.aliyuncs.com/binrcbase/kubectl
+    environment:
+      KUBECONFIG:
+        from_secret: kubeconfig_data
+      HOME: /root
+      IMAGE_TAG: ${DRONE_TAG}
+      NAMESPACE: roma
+      DOMAIN: roma.binrc.com
+    commands:
+      - echo "$KUBECONFIG" > /drone/src/kubeconfig
+      - sed -e "s|roma-web:latest|roma-web:$IMAGE_TAG|g" -e "s|roma|$NAMESPACE|g" -e "s|roma.binrc.com|$DOMAIN|g" deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.deploy.yaml
+      - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.deploy.yaml -n $NAMESPACE
+      - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE
+
+# secret 来自 Drone 的 Secret 管理，需要先创建 secret 才能使用
+---
+kind: secret
+name: kubeconfig_data
+get:
+  path: kubeconfig-data
+  name: KUBECONFIG_DATA
+---
+kind: secret
+name: docker_username
+get:
+  path: docker-username
+  name: DOCKER_USERNAME
+---
+kind: secret
+name: docker_password
+get:
+  path: docker-password
+  name: DOCKER_PASSWORD

@@ -1,0 +1,66 @@
+# 使用 Node.js 作为22基础镜像
+FROM registry.cn-hongkong.aliyuncs.com/binrcbase/node:22-alpine as build
+
+# 设置工作目录
+WORKDIR /app
+
+RUN npm install -g npm@11.4.1
+# 复制 package.json 和 package-lock.json
+COPY package.json ./
+# 安装依赖
+# 安装依赖，启用 verbose 日志
+RUN npm install --loglevel=verbose 2>&1 | tee /app/npm-install.log || { echo "npm install failed, printing logs"; cat /app/npm-install.log /root/.npm/_logs/*.log 2>/dev/null; exit 1; }
+
+# 复制项目文件
+COPY . .
+
+# 构建参数，支持多环境构建
+ARG BUILD_MODE=production
+ARG NODE_ENV=production
+
+# 环境变量参数（通过 --build-arg 注入）
+ARG VITE_API_BASE_URL
+ARG VITE_ENV
+ARG VITE_DEMO
+
+# 将 ARG 转换为 ENV，供 Vite 构建时使用
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_ENV=${VITE_ENV:-${BUILD_MODE}}
+ENV NODE_ENV=${NODE_ENV:-production}
+
+# 构建应用
+RUN npm run build
+
+# 保存构建时的环境变量到文件（供运行时使用）
+RUN if [ -n "$VITE_API_BASE_URL" ]; then \
+        echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" > /app/dist/.env; \
+    fi
+
+# 使用 Nginx 作为生产环境的基础镜像
+FROM registry.cn-hongkong.aliyuncs.com/binrcbase/nginx:alpine
+
+# 构建参数传递到运行时镜像
+ARG BUILD_MODE=production
+
+# 将构建好的 React 应用复制到 Nginx 的静态文件目录
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# 从构建产物中复制 .env 文件（如果存在）
+RUN if [ -f /usr/share/nginx/html/.env ]; then \
+        cp /usr/share/nginx/html/.env /app/.env; \
+    else \
+        echo "# Auto-generated .env file" > /app/.env; \
+    fi
+
+# 复制 Nginx 配置模板
+COPY deployment/nginx.conf.template /etc/nginx/nginx.conf.template
+
+# 复制启动脚本
+COPY deployment/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# 暴露 80 端口
+EXPOSE 80
+
+# 使用启动脚本来处理配置替换
+ENTRYPOINT ["/docker-entrypoint.sh"]

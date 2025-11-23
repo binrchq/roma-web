@@ -1,0 +1,84 @@
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roma-web
+  namespace: roma
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: roma-web
+  template:
+    metadata:
+      labels:
+        app: roma-web
+    spec:
+      imagePullSecrets:
+        - name: ali-hk-registry-secret
+      containers:
+        - name: roma-web
+          imagePullPolicy: Always
+          image: registry.cn-hongkong.aliyuncs.com/binrc/roma-web:latest # 替换为你的镜像
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: roma-web-service
+  namespace: roma
+spec:
+  selector:
+    app: roma-web
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+# Ingress
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-to-https
+  namespace: roma
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: roma-redirect-to-https@kubernetescrd
+  name: roma-web-ingress
+  namespace: roma
+spec:
+  ingressClassName: traefik
+  tls:
+    - secretName: binrc-tls-secret
+      hosts:
+        - roma.binrc.com
+  rules:
+    - host: roma.binrc.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: roma-web-service
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix

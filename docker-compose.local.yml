@@ -1,0 +1,30 @@
+services:
+  roma-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_MODE: ${BUILD_MODE:-production}
+        NODE_ENV: ${NODE_ENV:-production}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:6999/api/v1}
+        VITE_ENV: ${VITE_ENV:-development}
+    image: binrc/roma-web:local
+    container_name: roma-web-local
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:6999/api/v1}
+    networks:
+      - roma-network-local
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  roma-network-local:
+    driver: bridge
+

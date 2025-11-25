@@ -152,6 +152,27 @@ export default function Settings() {
                   </div>
                 </div>
               )}
+              {systemInfo.ssh_service && (
+                <div className="mt-4 pt-4 border-t">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">SSH 服务信息</label>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">连接地址:</span>
+                      <span className="ml-2 font-mono font-medium text-gray-900">{systemInfo.ssh_service.address || '-'}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-gray-500">主机:</span>
+                        <span className="ml-2 font-mono text-gray-900">{systemInfo.ssh_service.host || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">端口:</span>
+                        <span className="ml-2 font-mono text-gray-900">{systemInfo.ssh_service.port || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-sm text-gray-500">无法加载系统信息</div>

@@ -53,7 +53,7 @@ steps:
       - |
         # 注入 VITE_API_BASE_URL 环境变量到 Deployment（用于 nginx 反向代理配置）
         if ! grep -q "VITE_API_BASE_URL" /drone/src/k8s-deployment.demo.yaml; then
-          sed -i '/ports:/i\          env:\n            - name: VITE_API_BASE_URL\n              value: "'$BACKEND_API_URL'"' /drone/src/k8s-deployment.demo.yaml
+          awk -v api_url="$BACKEND_API_URL" '/ports:/ {print "          env:"; print "            - name: VITE_API_BASE_URL"; print "              value: \"" api_url "\""} 1' /drone/src/k8s-deployment.demo.yaml > /tmp/k8s-deployment.tmp && mv /tmp/k8s-deployment.tmp /drone/src/k8s-deployment.demo.yaml
         fi
       - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.demo.yaml
       - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE --timeout=3m
@@ -78,7 +78,7 @@ steps:
       - |
         # 注入 VITE_API_BASE_URL 环境变量到 Deployment（用于 nginx 反向代理配置）
         if ! grep -q "VITE_API_BASE_URL" /drone/src/k8s-deployment.deploy.yaml; then
-          sed -i '/ports:/i\          env:\n            - name: VITE_API_BASE_URL\n              value: "'$BACKEND_API_URL'"' /drone/src/k8s-deployment.deploy.yaml
+          awk -v api_url="$BACKEND_API_URL" '/ports:/ {print "          env:"; print "            - name: VITE_API_BASE_URL"; print "              value: \"" api_url "\""} 1' /drone/src/k8s-deployment.deploy.yaml > /tmp/k8s-deployment.tmp && mv /tmp/k8s-deployment.tmp /drone/src/k8s-deployment.deploy.yaml
         fi
       - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.deploy.yaml
       - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE --timeout=3m

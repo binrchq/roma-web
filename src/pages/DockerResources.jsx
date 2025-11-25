@@ -153,10 +153,16 @@ export default function DockerResources() {
 
   const handleSave = async () => {
     try {
+      // 转换数字字段
+      const processedData = { ...formData }
+      if (processedData.id) processedData.id = Number(processedData.id)
+      if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+      if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+      
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, { ...formData, type: 'docker' })
+        await api.updateResource(selectedResource.id, { ...processedData, type: 'docker' })
       } else {
-        await api.createResource({ ...formData, type: 'docker' })
+        await api.createResource({ ...processedData, type: 'docker' })
       }
       await loadResources()
       setEditDialogOpen(false)

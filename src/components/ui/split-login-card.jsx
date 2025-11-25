@@ -28,8 +28,9 @@ export default function SplitLoginCard({ onLogin, loading, error }) {
 
         <div className="relative z-10 flex flex-col items-center">
           {/* ROMA Logo SVG */}
-          <div className="">
-            <RomaLogo size="large" />
+          <div className="w-full mb-16 flex">
+            {/* <RomaLogo size="large" /> */}
+            <p className="text-xl font-bold text-white mx-8 my-8 my-auto">ROMA</p>
           </div>
 
           {/* ASCII Art 风格的文字展示 */}

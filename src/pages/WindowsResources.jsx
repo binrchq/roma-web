@@ -153,10 +153,16 @@ export default function WindowsResources() {
 
   const handleSave = async () => {
     try {
+      // 转换数字字段
+      const processedData = { ...formData }
+      if (processedData.id) processedData.id = Number(processedData.id)
+      if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+      if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+      
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, { ...formData, type: 'windows' })
+        await api.updateResource(selectedResource.id, { ...processedData, type: 'windows' })
       } else {
-        await api.createResource({ ...formData, type: 'windows' })
+        await api.createResource({ ...processedData, type: 'windows' })
       }
       await loadResources()
       setEditDialogOpen(false)

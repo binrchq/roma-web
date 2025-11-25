@@ -154,10 +154,17 @@ export default function SwitchResources() {
 
   const handleSave = async () => {
     try {
+      // 转换数字字段
+      const processedData = { ...formData }
+      if (processedData.id) processedData.id = Number(processedData.id)
+      if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+      if (processedData.port_actual !== undefined && processedData.port_actual !== '') processedData.port_actual = Number(processedData.port_actual)
+      if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+      
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, { ...formData, type: 'switch' })
+        await api.updateResource(selectedResource.id, { ...processedData, type: 'switch' })
       } else {
-        await api.createResource({ ...formData, type: 'switch' })
+        await api.createResource({ ...processedData, type: 'switch' })
       }
       await loadResources()
       setEditDialogOpen(false)

@@ -156,10 +156,16 @@ export default function RouterResources() {
 
   const handleSave = async () => {
     try {
+      // 转换数字字段
+      const processedData = { ...formData }
+      if (processedData.id) processedData.id = Number(processedData.id)
+      if (processedData.web_port !== undefined && processedData.web_port !== '') processedData.web_port = Number(processedData.web_port)
+      if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+      
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, { ...formData, type: 'router' })
+        await api.updateResource(selectedResource.id, { ...processedData, type: 'router' })
       } else {
-        await api.createResource({ ...formData, type: 'router' })
+        await api.createResource({ ...processedData, type: 'router' })
       }
       await loadResources()
       setEditDialogOpen(false)

@@ -155,10 +155,15 @@ export default function DatabaseResources() {
 
   const handleSave = async () => {
     try {
+      // 转换数字字段
+      const processedData = { ...formData }
+      if (processedData.id) processedData.id = Number(processedData.id)
+      if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+      
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, { ...formData, type: 'database' })
+        await api.updateResource(selectedResource.id, { ...processedData, type: 'database' })
       } else {
-        await api.createResource({ ...formData, type: 'database' })
+        await api.createResource({ ...processedData, type: 'database' })
       }
       await loadResources()
       setEditDialogOpen(false)

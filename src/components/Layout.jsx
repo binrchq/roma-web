@@ -379,7 +379,7 @@ function UserMenu({ username, email }) {
       return
     }
     if (!newPrivateKey.trim()) {
-      alert('请输入私钥（Base64编码）')
+      alert('请输入私钥（PEM 格式）')
       return
     }
     try {
@@ -418,6 +418,24 @@ function UserMenu({ username, email }) {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
     alert('已复制到剪贴板')
+  }
+
+  const downloadPrivateKey = (privateKeyPEM, filename = 'id_rsa') => {
+    try {
+      // 私钥已经是原始 PEM 格式，直接下载
+      const blob = new Blob([privateKeyPEM], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('下载私钥失败:', error)
+      alert('下载私钥失败: ' + (error.message || '未知错误'))
+    }
   }
 
 
@@ -504,7 +522,7 @@ function UserMenu({ username, email }) {
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <Label>公钥（部分显示）</Label>
+                    <Label>公钥</Label>
                     <div className="mt-1">
                       <Textarea
                         readOnly
@@ -512,7 +530,6 @@ function UserMenu({ username, email }) {
                         className="font-mono text-xs"
                         rows={3}
                       />
-                      <p className="mt-1 text-xs text-gray-500">出于安全考虑，公钥仅显示头尾部分</p>
                     </div>
                   </div>
                 </div>
@@ -528,7 +545,7 @@ function UserMenu({ username, email }) {
           <DialogHeader>
             <DialogTitle>上传 SSH 密钥</DialogTitle>
             <DialogDescription>
-              上传您的 SSH 公钥和私钥（私钥需要 Base64 编码）
+              上传您的 SSH 公钥和私钥（私钥为 PEM 格式）
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -544,12 +561,12 @@ function UserMenu({ username, email }) {
               />
             </div>
             <div>
-              <Label htmlFor="private-key">私钥（Base64编码）</Label>
+              <Label htmlFor="private-key">私钥（PEM 格式）</Label>
               <Textarea
                 id="private-key"
                 value={newPrivateKey}
                 onChange={(e) => setNewPrivateKey(e.target.value)}
-                placeholder="LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQ..."
+                placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
                 className="mt-1 font-mono text-xs"
                 rows={5}
               />
@@ -592,7 +609,7 @@ function UserMenu({ username, email }) {
                 </div>
               </div>
               <div>
-                <Label>私钥（Base64编码）</Label>
+                <Label>私钥</Label>
                 <div className="mt-1 flex items-center gap-2">
                   <Textarea
                     readOnly
@@ -600,13 +617,22 @@ function UserMenu({ username, email }) {
                     className="font-mono text-xs"
                     rows={8}
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(generatedKey.private_key || '')}
-                  >
-                    复制
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(generatedKey.private_key || '')}
+                    >
+                      复制
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => downloadPrivateKey(generatedKey.private_key || '', 'id_rsa')}
+                    >
+                      下载
+                    </Button>
+                  </div>
                 </div>
               </div>
               <div className="bg-yellow-50 border border-yellow-200 rounded p-3">

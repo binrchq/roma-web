@@ -1,48 +1,3 @@
-# ---
-# kind: pipeline
-# type: kubernetes
-# name: test-deploy-roma-web
-
-# trigger:
-#   branch:
-#     - test
-#   event:
-#     - push
-
-# steps:
-#   - name: build docker image
-#     image: plugins/docker
-#     settings:
-#       dockerfile: Dockerfile
-#       context: .
-#       repo: registry.cn-hongkong.aliyuncs.com/binrc/roma-web
-#       registry: registry.cn-hongkong.aliyuncs.com
-#       tags:
-#         - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
-#         - ${DRONE_BRANCH}-${DRONE_BUILD_NUMBER}
-#         - latest
-#       username:
-#         from_secret: docker_username
-#       password:
-#         from_secret: docker_password
-#       build_args:
-#         - BUILD_MODE=test
-
-#   - name: deploy to test
-#     image: registry.cn-hongkong.aliyuncs.com/binrcbase/kubectl
-#     environment:
-#       KUBECONFIG:
-#         from_secret: kubeconfig_data
-#       HOME: /root
-#       IMAGE_TAG: ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
-#       NAMESPACE: roma-test
-#       DOMAIN: roma-test.binrc.com
-#     commands:
-#       - echo "$KUBECONFIG" > /drone/src/kubeconfig
-#       - sed -e "s|roma-web:latest|roma-web:$IMAGE_TAG|g" -e "s|roma-test|$NAMESPACE|g" -e "s|web-test.meshwise.cn|$DOMAIN|g" deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.deploy.yaml
-#       - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.deploy.yaml -n $NAMESPACE
-#       - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE
-
 ---
 kind: pipeline
 type: kubernetes
@@ -56,9 +11,9 @@ steps:
   - name: build docker image
     image: plugins/docker
     settings:
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.ali
       context: .
-      repo: registry.cn-hongkong.aliyuncs.com/binrc/roma-web
+      repo: registry.cn-hongkong.aliyuncs.com/binrchq/roma-web
       registry: registry.cn-hongkong.aliyuncs.com
       tags:
         - ${DRONE_TAG}
@@ -68,7 +23,8 @@ steps:
       password:
         from_secret: docker_password
       build_args:
-        - BUILD_MODE=prod
+        - BUILD_MODE=production
+        - NODE_ENV=production
   
   - name: deploy to demo
     image: registry.cn-hongkong.aliyuncs.com/binrcbase/kubectl
@@ -79,11 +35,28 @@ steps:
       IMAGE_TAG: ${DRONE_TAG}
       NAMESPACE: demo
       DOMAIN: roma-demo.binrc.com
+      BACKEND_API_URL: https://roma-demo-api.binrc.com
+    depends_on:
+      - build docker image
     commands:
       - echo "$KUBECONFIG" > /drone/src/kubeconfig
-      - sed -e "s|roma-web:latest|roma-web:$IMAGE_TAG|g" -e "s|roma-demo|$NAMESPACE|g" -e "s|roma-demo.binrc.com|$DOMAIN|g" deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.demo.yaml
-      - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.demo.yaml -n $NAMESPACE
-      - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE
+      - |
+        sed -e "s|registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:latest|registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:$IMAGE_TAG|g" \
+            -e "s|namespace: roma|namespace: $NAMESPACE|g" \
+            -e "s|name: roma-web-service|name: roma-web-service|g" \
+            -e "s|name: redirect-to-https|name: redirect-to-https|g" \
+            -e "s|name: roma-web-ingress|name: roma-web-ingress|g" \
+            -e "s|traefik.ingress.kubernetes.io/router.middlewares: roma-redirect-to-https@kubernetescrd|traefik.ingress.kubernetes.io/router.middlewares: $NAMESPACE-redirect-to-https@kubernetescrd|g" \
+            -e "s|- roma.binrc.com|- $DOMAIN|g" \
+            -e "s|host: roma.binrc.com|host: $DOMAIN|g" \
+            deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.demo.yaml
+      - |
+        # 注入 VITE_API_BASE_URL 环境变量到 Deployment（用于 nginx 反向代理配置）
+        if ! grep -q "VITE_API_BASE_URL" /drone/src/k8s-deployment.demo.yaml; then
+          sed -i '/ports:/i\          env:\n            - name: VITE_API_BASE_URL\n              value: "'$BACKEND_API_URL'"' /drone/src/k8s-deployment.demo.yaml
+        fi
+      - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.demo.yaml
+      - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE --timeout=3m
 
   - name: deploy to prod
     image: registry.cn-hongkong.aliyuncs.com/binrcbase/kubectl
@@ -93,12 +66,22 @@ steps:
       HOME: /root
       IMAGE_TAG: ${DRONE_TAG}
       NAMESPACE: roma
-      DOMAIN: roma.binrc.com
+      DOMAIN: roma.c.binrc.com
+      BACKEND_API_URL: https://roma-api.c.binrc.com
+    depends_on:
+      - build docker image
     commands:
       - echo "$KUBECONFIG" > /drone/src/kubeconfig
-      - sed -e "s|roma-web:latest|roma-web:$IMAGE_TAG|g" -e "s|roma|$NAMESPACE|g" -e "s|roma.binrc.com|$DOMAIN|g" deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.deploy.yaml
-      - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.deploy.yaml -n $NAMESPACE
-      - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE
+      - |
+        sed -e "s|registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:latest|registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:$IMAGE_TAG|g" \
+            deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.deploy.yaml
+      - |
+        # 注入 VITE_API_BASE_URL 环境变量到 Deployment（用于 nginx 反向代理配置）
+        if ! grep -q "VITE_API_BASE_URL" /drone/src/k8s-deployment.deploy.yaml; then
+          sed -i '/ports:/i\          env:\n            - name: VITE_API_BASE_URL\n              value: "'$BACKEND_API_URL'"' /drone/src/k8s-deployment.deploy.yaml
+        fi
+      - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.deploy.yaml
+      - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE --timeout=3m
 
 # secret 来自 Drone 的 Secret 管理，需要先创建 secret 才能使用
 ---

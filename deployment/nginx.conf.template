@@ -50,16 +50,18 @@ http {
             }
         }
 
-        # 前端路由支持 (SPA)
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-
         # 健康检查端点
         location /health {
             access_log off;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
+        }
+
+        # 前端路由支持 (SPA) - 必须放在最后，确保所有非 API 请求都返回 index.html
+        location / {
+            try_files $uri $uri/ /index.html;
+            # 确保 index.html 不被缓存，以便更新后能立即生效
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
         }
 
         # 安全头

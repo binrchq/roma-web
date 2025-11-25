@@ -49,20 +49,33 @@ export default function LinuxResources() {
   const [nameFilter, setNameFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [visibleColumns, setVisibleColumns] = useState(new Set(allColumns))
-  
+
   const [page, setPage] = useState(1)
   const [pageSize] = useState(10)
   const [total, setTotal] = useState(0)
-  
+
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedResource, setSelectedResource] = useState(null)
   const [formData, setFormData] = useState({})
+  const [roles, setRoles] = useState([])
+  const [selectedRole, setSelectedRole] = useState('')
 
   useEffect(() => {
     loadResources()
+    loadRoles()
   }, [page])
+
+  const loadRoles = async () => {
+    try {
+      const data = await api.getRoles()
+      setRoles(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('加载角色列表失败:', error)
+      setRoles([])
+    }
+  }
 
   const loadResources = async () => {
     try {
@@ -96,7 +109,7 @@ export default function LinuxResources() {
 
       return nameMatch && statusMatch
     })
-    
+
     const start = (page - 1) * pageSize
     const end = start + pageSize
     setTotal(filtered.length)
@@ -131,12 +144,19 @@ export default function LinuxResources() {
     try {
       const data = await api.getResourceById(resource.id, 'linux')
       setSelectedResource(data)
-      setFormData(data)
+      setFormData(data.resource || data)
+      // 设置角色信息
+      if (data.role) {
+        setSelectedRole(data.role.name || '')
+      } else {
+        setSelectedRole('')
+      }
       setEditDialogOpen(true)
     } catch (error) {
       console.error('获取资源详情失败:', error)
       setSelectedResource(resource)
       setFormData(resource)
+      setSelectedRole('')
       setEditDialogOpen(true)
     }
   }
@@ -155,16 +175,30 @@ export default function LinuxResources() {
 
   const handleSave = async () => {
     try {
+      // 转换数字字段
+      const processedData = { ...formData }
+      if (processedData.id) processedData.id = Number(processedData.id)
+      if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+      if (processedData.port_actual !== undefined && processedData.port_actual !== '') processedData.port_actual = Number(processedData.port_actual)
+      if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+
+      // 构建请求数据，包含角色信息
+      const requestData = { ...processedData, type: 'linux' }
+      if (selectedRole) {
+        requestData.role = selectedRole
+      }
+
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, { ...formData, type: 'linux' })
+        await api.updateResource(selectedResource.id, requestData)
       } else {
-        await api.createResource({ ...formData, type: 'linux' })
+        await api.createResource(requestData)
       }
       await loadResources()
       setEditDialogOpen(false)
       setAddDialogOpen(false)
       setFormData({})
       setSelectedResource(null)
+      setSelectedRole('')
     } catch (error) {
       console.error('保存资源失败:', error)
       alert('保存失败: ' + (error.message || '未知错误'))
@@ -190,6 +224,7 @@ export default function LinuxResources() {
         </div>
         <Button onClick={() => {
           setFormData({ type: 'linux' })
+          setSelectedRole('')
           setAddDialogOpen(true)
         }} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -290,7 +325,7 @@ export default function LinuxResources() {
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-          
+
           {total > 0 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-600">
@@ -411,10 +446,35 @@ export default function LinuxResources() {
                   </div>
                 ))
               })()}
+              {/* 角色选择 */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">角色分配</h3>
+                <div className="grid grid-cols-4 gap-4">
+                  <Label className="text-right pt-2">角色</Label>
+                  <div className="col-span-3 space-y-1">
+                    <select
+                      className="w-full px-3 py-2 border rounded-md bg-white"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                    >
+                      <option value="">请选择角色（可选）</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.name}>
+                          {role.name} - {role.desc || ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">为资源分配角色，用于权限控制</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
+            <Button variant="outline" onClick={() => {
+              setEditDialogOpen(false)
+              setSelectedRole('')
+            }}>取消</Button>
             <Button onClick={handleSave}>保存</Button>
           </DialogFooter>
         </DialogContent>
@@ -470,11 +530,34 @@ export default function LinuxResources() {
                 </div>
               ))
             })()}
+            {/* 角色选择 */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">角色分配</h3>
+              <div className="grid grid-cols-4 gap-4">
+                <Label className="text-right pt-2">角色</Label>
+                <div className="col-span-3 space-y-1">
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                  >
+                    <option value="">请选择角色（可选）</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.name}>
+                        {role.name} - {role.desc || ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">为资源分配角色，用于权限控制</p>
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setAddDialogOpen(false)
               setFormData({})
+              setSelectedRole('')
             }}>取消</Button>
             <Button onClick={handleSave}>创建</Button>
           </DialogFooter>

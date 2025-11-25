@@ -10,11 +10,13 @@ export default defineConfig(({ mode }) => {
       case 'development':
         return process.env.VITE_API_BASE_URL || 'http://localhost:6999'
       case 'test':
-        return process.env.VITE_API_BASE_URL || 'https://jump-test.meshwise.cn'
+        return process.env.VITE_API_BASE_URL || 'https://roma-backend-test.binrc.com'
       case 'staging':
-        return process.env.VITE_API_BASE_URL || 'https://jump-staging.meshwise.cn'
+        return process.env.VITE_API_BASE_URL || 'https://roma-backend-staging.binrc.com'
       case 'production':
-        return process.env.VITE_API_BASE_URL || 'https://jump.meshwise.cn'
+        return process.env.VITE_API_BASE_URL || 'https://roma-backend.binrc.com'
+      case 'demo':
+        return process.env.VITE_API_BASE_URL || 'https://roma-backend-demo.binrc.com'
       default:
         return 'http://localhost:6999'
     }
@@ -24,7 +26,7 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
 
   return {
-    base: './', // 关键配置，确保资源路径为相对路径
+    base: '/', // 使用绝对路径，确保在任何路由下都能正确加载静态资源
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

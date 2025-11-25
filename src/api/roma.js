@@ -39,15 +39,23 @@ const getResourceById = (id, type = '') => {
     return httpRequest(`resources/${id}`, params, 'GET', isShowInfoToast, isPublicRequest)
 }
 const createResource = (data) => {
-    // 后端需要 { type: "linux", data: [...] } 格式
-    const { type, ...resourceData } = data
-    return httpRequest('resources', { type, data: [resourceData] }, 'POST', isShowInfoToast, isPublicRequest)
+    // 后端需要 { type: "linux", role: "ops", data: [...] } 格式
+    const { type, role, ...resourceData } = data
+    const requestData = { type, data: [resourceData] }
+    if (role) {
+        requestData.role = role
+    }
+    return httpRequest('resources', requestData, 'POST', isShowInfoToast, isPublicRequest)
 }
 const updateResource = (id, data) => {
-    // 后端需要 { type: "linux", data: [...] } 格式
-    const { type, ...resourceData } = data
+    // 后端需要 { type: "linux", role: "ops", data: [...] } 格式
+    const { type, role, ...resourceData } = data
     resourceData.id = id
-    return httpRequest(`resources/${id}`, { type, data: [resourceData] }, 'PUT', isShowInfoToast, isPublicRequest)
+    const requestData = { type, data: [resourceData] }
+    if (role) {
+        requestData.role = role
+    }
+    return httpRequest(`resources/${id}`, requestData, 'PUT', isShowInfoToast, isPublicRequest)
 }
 const deleteResource = (id, type) => {
     // 后端需要 { type: "linux", data: [{ id }] } 格式

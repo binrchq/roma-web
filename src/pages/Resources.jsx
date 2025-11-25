@@ -149,10 +149,23 @@ export default function Resources() {
   const [selectedResource, setSelectedResource] = useState(null)
   const [selectedType, setSelectedType] = useState('')
   const [formData, setFormData] = useState({})
+  const [roles, setRoles] = useState([])
+  const [selectedRole, setSelectedRole] = useState('')
 
   useEffect(() => {
     loadResources()
+    loadRoles()
   }, [typeFilter, page])
+
+  const loadRoles = async () => {
+    try {
+      const data = await api.getRoles()
+      setRoles(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('加载角色列表失败:', error)
+      setRoles([])
+    }
+  }
 
   const loadResources = async () => {
     try {
@@ -241,13 +254,20 @@ export default function Resources() {
       // 从后端获取完整资源详情
       const data = await api.getResourceById(resource.id, resource.type)
       setSelectedResource(data)
-      setFormData(data)
+      setFormData(data.resource || data)
+      // 设置角色信息
+      if (data.role) {
+        setSelectedRole(data.role.name || '')
+      } else {
+        setSelectedRole('')
+      }
       setEditDialogOpen(true)
     } catch (error) {
       console.error('获取资源详情失败:', error)
       // 如果获取失败，使用当前资源数据
       setSelectedResource(resource)
       setFormData(resource)
+      setSelectedRole('')
       setEditDialogOpen(true)
     }
   }
@@ -271,18 +291,65 @@ export default function Resources() {
   const handleTypeSelect = (type) => {
     setSelectedType(type)
     setFormData({ type })
+    setSelectedRole('')
     setAddTypeDialogOpen(false)
     setAddDialogOpen(true)
   }
 
   const handleSave = async () => {
     try {
+      // 转换数字字段
+      const processedData = { ...formData }
+      const resourceType = selectedResource?.type || selectedType
+
+      if (processedData.id) processedData.id = Number(processedData.id)
+
+      // 根据资源类型转换相应的数字字段
+      switch (resourceType) {
+        case 'linux':
+          if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+          if (processedData.port_actual !== undefined && processedData.port_actual !== '') processedData.port_actual = Number(processedData.port_actual)
+          if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+          break
+        case 'router':
+          if (processedData.web_port !== undefined && processedData.web_port !== '') processedData.web_port = Number(processedData.web_port)
+          if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+          break
+        case 'windows':
+          if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+          if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+          break
+        case 'docker':
+          if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+          if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+          break
+        case 'database':
+          if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+          break
+        case 'switch':
+          if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
+          if (processedData.port_actual !== undefined && processedData.port_actual !== '') processedData.port_actual = Number(processedData.port_actual)
+          if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
+          break
+      }
+
+      // 构建请求数据，包含角色信息
+      const requestData = { ...processedData }
       if (selectedResource) {
         // 编辑 - 需要传递 type 参数
-        await api.updateResource(selectedResource.id, { ...formData, type: selectedResource.type })
+        requestData.type = selectedResource.type
       } else {
         // 新增 - 确保包含 type
-        await api.createResource({ ...formData, type: selectedType })
+        requestData.type = selectedType
+      }
+      if (selectedRole) {
+        requestData.role = selectedRole
+      }
+
+      if (selectedResource) {
+        await api.updateResource(selectedResource.id, requestData)
+      } else {
+        await api.createResource(requestData)
       }
       await loadResources()
       setEditDialogOpen(false)
@@ -290,6 +357,7 @@ export default function Resources() {
       setFormData({})
       setSelectedResource(null)
       setSelectedType('')
+      setSelectedRole('')
     } catch (error) {
       console.error('保存资源失败:', error)
       alert('保存失败: ' + (error.message || '未知错误'))
@@ -556,10 +624,32 @@ export default function Resources() {
                   </div>
                 </div>
               ))}
+              {/* 角色选择 */}
+              <div className="grid grid-cols-4 gap-4 items-center">
+                <Label className="text-right">角色</Label>
+                <div className="col-span-3">
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                  >
+                    <option value="">请选择角色（可选）</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.name}>
+                        {role.name} - {role.desc || ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">为资源分配角色，用于权限控制</p>
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
+            <Button variant="outline" onClick={() => {
+              setEditDialogOpen(false)
+              setSelectedRole('')
+            }}>取消</Button>
             <Button onClick={handleSave}>保存</Button>
           </DialogFooter>
         </DialogContent>
@@ -623,6 +713,25 @@ export default function Resources() {
                   </div>
                 </div>
               ))}
+              {/* 角色选择 */}
+              <div className="grid grid-cols-4 gap-4 items-center">
+                <Label className="text-right">角色</Label>
+                <div className="col-span-3">
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                  >
+                    <option value="">请选择角色（可选）</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.name}>
+                        {role.name} - {role.desc || ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">为资源分配角色，用于权限控制</p>
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -630,6 +739,7 @@ export default function Resources() {
               setAddDialogOpen(false)
               setFormData({})
               setSelectedType('')
+              setSelectedRole('')
             }}>取消</Button>
             <Button onClick={handleSave}>创建</Button>
           </DialogFooter>

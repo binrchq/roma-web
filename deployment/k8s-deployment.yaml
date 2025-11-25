@@ -20,7 +20,7 @@ spec:
       containers:
         - name: roma-web
           imagePullPolicy: Always
-          image: registry.cn-hongkong.aliyuncs.com/binrc/roma-web:latest # 替换为你的镜像
+          image: registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:latest # 替换为你的镜像
           ports:
             - containerPort: 80
           resources:

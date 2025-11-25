@@ -131,3 +131,4 @@ login: ## 登录 Docker 镜像仓库
 	@docker login $(IMAGE_REGISTRY)
 	@echo "✅ 登录成功"
 
+

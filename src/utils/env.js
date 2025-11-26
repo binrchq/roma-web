@@ -19,20 +19,24 @@ export const getApiBaseUrl = () => {
         // 构建时注入的环境变量
         const envApiUrl = import.meta.env.VITE_API_BASE_URL;
         if (envApiUrl) {
+            console.log('[env] Using build-time VITE_API_BASE_URL:', envApiUrl);
             return envApiUrl;
         }
 
         // 开发环境：使用代理或本地后端
         const hostname = window.location.hostname;
         if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+            console.log('[env] Using relative path /api for development');
             return '/api'; // Vite代理会自动转发到后端
         }
 
         // 默认：使用相对路径，由 nginx 代理处理
+        console.warn('[env] Placeholder not replaced, using default /api');
         return '/api';
     }
 
     // 返回运行时替换的值
+    console.log('[env] Using runtime replaced API URL:', runtimeApiUrl);
     return runtimeApiUrl;
 };
 

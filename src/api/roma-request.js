@@ -76,7 +76,8 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
             const fetchOptions = {
                 method: method,
                 headers: headers,
-                signal: controller.signal
+                signal: controller.signal,
+                redirect: 'follow' // 明确跟随重定向（包括 308）
             };
 
             // GET和HEAD请求不能有body
@@ -104,9 +105,21 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
                 }
             }
 
-            fetch(BASE_URL + url + queryString, fetchOptions)
+            const fullUrl = BASE_URL + url + queryString;
+            console.log('[api] Request URL:', fullUrl);
+            console.log('[api] API Base URL:', apiBaseUrl);
+            console.log('[api] BASE_URL:', BASE_URL);
+            console.log('[api] Full URL:', fullUrl);
+            fetch(fullUrl, fetchOptions)
                 .then(async (response) => {
                     clearTimeout(timeoutId);
+
+                    // 记录响应状态和重定向信息
+                    console.log('[api] Response status:', response.status);
+                    console.log('[api] Response URL:', response.url);
+                    if (response.redirected) {
+                        console.log('[api] Request was redirected to:', response.url);
+                    }
 
                     if (showToast) {
                         console.log('加载完成');

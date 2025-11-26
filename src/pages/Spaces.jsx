@@ -178,8 +178,12 @@ export default function Spaces() {
         user_id: parseInt(memberFormData.user_id),
         role_id: parseInt(memberFormData.role_id),
       })
+      // 重新加载空间详情以更新成员列表
+      const spaceDetail = await api.getSpaceById(selectedSpace.id)
+      setSelectedSpace(spaceDetail)
       await loadSpaces()
-      closeMemberDialog()
+      // 清空表单
+      setMemberFormData({ user_id: '', role_id: '' })
     } catch (error) {
       logger.error('添加成员失败:', error)
       alert('添加成员失败: ' + (error.message || '未知错误'))
@@ -193,6 +197,11 @@ export default function Spaces() {
 
     try {
       await api.removeSpaceMember(spaceId, { user_id: userId })
+      // 如果对话框打开，更新选中的空间信息
+      if (memberDialogOpen && selectedSpace && selectedSpace.id === spaceId) {
+        const spaceDetail = await api.getSpaceById(spaceId)
+        setSelectedSpace(spaceDetail)
+      }
       await loadSpaces()
     } catch (error) {
       logger.error('移除成员失败:', error)
@@ -253,22 +262,37 @@ export default function Spaces() {
                   <TableCell>
                     {space.members && space.members.length > 0 ? (
                       <div className="space-y-1">
-                        {space.members.map((member) => (
-                          <div key={member.id} className="flex items-center justify-between text-sm">
-                            <span>{member.user?.username || member.user?.name || `用户${member.user_id}`}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveMember(space.id, member.user_id)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
+                        <div className="text-sm font-medium text-gray-700 mb-1">
+                          {space.members.length} 个成员
+                        </div>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {space.members.map((member) => (
+                            <div key={member.id} className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 truncate">
+                                  {member.user?.username || member.user?.name || `用户${member.user_id}`}
+                                </div>
+                                {member.role && (
+                                  <div className="text-gray-500 text-xs truncate">
+                                    角色: {member.role.name}
+                                  </div>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveMember(space.id, member.user_id)}
+                                className="h-5 w-5 p-0 text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
+                                title="移除成员"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : (
-                      <span className="text-gray-400">0</span>
+                      <span className="text-gray-400">0 个成员</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -346,55 +370,106 @@ export default function Spaces() {
 
       {/* 添加成员对话框 */}
       <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>添加成员 - {selectedSpace?.name}</DialogTitle>
-            <DialogDescription>向空间添加成员并分配角色</DialogDescription>
+            <DialogTitle>管理成员 - {selectedSpace?.name}</DialogTitle>
+            <DialogDescription>向空间添加成员并分配角色，或移除现有成员</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="user_id">用户 *</Label>
-              <Select
-                value={memberFormData.user_id}
-                onValueChange={(value) => setMemberFormData({ ...memberFormData, user_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择用户" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.username} ({user.name || user.email})
-                    </SelectItem>
+          <div className="space-y-6 py-4">
+            {/* 当前成员列表 */}
+            {selectedSpace?.members && selectedSpace.members.length > 0 && (
+              <div>
+                <Label className="text-base font-semibold mb-3 block">当前成员 ({selectedSpace.members.length})</Label>
+                <div className="border rounded-md divide-y">
+                  {selectedSpace.members.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">
+                          {member.user?.username || member.user?.name || `用户${member.user_id}`}
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {member.user?.email && <span>{member.user.email}</span>}
+                          {member.role && (
+                            <span className="ml-2">
+                              角色: <span className="font-medium">{member.role.name}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveMember(selectedSpace.id, member.user_id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        移除
+                      </Button>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="role_id">角色 *</Label>
-              <Select
-                value={memberFormData.role_id}
-                onValueChange={(value) => setMemberFormData({ ...memberFormData, role_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择角色" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
+            )}
+
+            {/* 添加新成员 */}
+            <div className="border-t pt-4">
+              <Label className="text-base font-semibold mb-3 block">添加新成员</Label>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="user_id">用户 *</Label>
+                  <Select
+                    value={memberFormData.user_id}
+                    onValueChange={(value) => setMemberFormData({ ...memberFormData, user_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择用户" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users
+                        .filter((user) => !selectedSpace?.members?.some((m) => m.user_id === user.id))
+                        .map((user) => (
+                          <SelectItem key={user.id} value={user.id.toString()}>
+                            {user.username} {user.name && `(${user.name})`} {user.email && `- ${user.email}`}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedSpace?.members && selectedSpace.members.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      已过滤已在空间中的用户
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="role_id">角色 *</Label>
+                  <Select
+                    value={memberFormData.role_id}
+                    onValueChange={(value) => setMemberFormData({ ...memberFormData, role_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择角色" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id.toString()}>
+                          {role.name} {role.desc && `- ${role.desc}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeMemberDialog}>
-              取消
+              关闭
             </Button>
-            <Button onClick={handleAddMember}>
-              添加
+            <Button 
+              onClick={handleAddMember}
+              disabled={!memberFormData.user_id || !memberFormData.role_id}
+            >
+              添加成员
             </Button>
           </DialogFooter>
         </DialogContent>

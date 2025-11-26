@@ -4,29 +4,11 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 export default defineConfig(({ mode }) => {
-  // 根据环境获取API基础URL
-  const getApiBaseUrl = () => {
-    switch (mode) {
-      case 'development':
-        return process.env.VITE_API_BASE_URL || 'http://localhost:6999'
-      case 'test':
-        return process.env.VITE_API_BASE_URL || 'https://roma-backend-test.binrc.com'
-      case 'staging':
-        return process.env.VITE_API_BASE_URL || 'https://roma-backend-staging.binrc.com'
-      case 'production':
-        return process.env.VITE_API_BASE_URL || 'https://roma-backend.binrc.com'
-      case 'demo':
-        return process.env.VITE_API_BASE_URL || 'https://roma-backend-demo.binrc.com'
-      default:
-        return 'http://localhost:6999'
-    }
-  }
-
-  const apiBaseUrl = getApiBaseUrl()
   const isDev = mode === 'development'
+  const devBackendTarget = process.env.VITE_API_BASE_URL || 'http://localhost:6999'
 
   return {
-    base: '/', // 使用绝对路径，确保在任何路由下都能正确加载静态资源
+    base: '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
@@ -36,11 +18,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3021,
       host: true,
-      // 只在开发环境使用代理
       ...(isDev && {
         proxy: {
           '/api': {
-            target: apiBaseUrl,
+            target: devBackendTarget,
             changeOrigin: true,
             secure: false,
             rewrite: (path) => path.replace(/^\/api/, '/api')
@@ -49,13 +30,11 @@ export default defineConfig(({ mode }) => {
       })
     },
     build: {
-      target: ['es2015', 'chrome63'], // 默认是modules,百度说是更改这个会去输出兼容浏览器，尝试没啥作用，先配置吧
+      target: ['es2015', 'chrome63'],
     },
-    // 环境变量配置
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
     },
-    // 根据模式加载对应的环境文件
     envDir: '.',
     envPrefix: 'VITE_',
   }

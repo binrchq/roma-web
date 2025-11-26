@@ -25,9 +25,9 @@ spec:
             - containerPort: 80
           env:
             - name: VITE_ENV
-              value: "production"
+              value: "prod"
             - name: VITE_API_BASE_URL
-              value: "https://roma-api.c.binrc.com"
+              value: "https://roma-api.c.binrc.com/api/v1"
           resources:
             requests:
               memory: "64Mi"

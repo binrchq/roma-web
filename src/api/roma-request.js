@@ -1,9 +1,26 @@
 // ROMA API 请求封装
 // 基于 request.js 的模式，但适配 ROMA API 的认证方式（使用 apikey）
 
+import { getApiBaseUrl } from '@/utils/env'
+
 const httpRequest = function (url, paramet, method, showToast = false, publicRequest = false, contentType = 'application/json') {
-    // ROMA API 基础路径
-    const BASE_URL = '/api/v1/';
+    // ROMA API 基础路径 - 使用环境配置的 API URL
+    const apiBaseUrl = getApiBaseUrl();
+    // 如果 API URL 是完整 URL（如 https://roma-api.c.binrc.com），直接使用
+    // 如果是相对路径（如 /api），拼接 /v1/
+    let BASE_URL;
+    if (apiBaseUrl.startsWith('http')) {
+        // 完整 URL：直接使用，假设已经包含 /api/v1/ 或类似路径
+        // 如果 VITE_API_BASE_URL 是 https://roma-api.c.binrc.com，需要拼接 /api/v1/
+        BASE_URL = apiBaseUrl.endsWith('/')
+            ? `${apiBaseUrl}api/v1/`
+            : `${apiBaseUrl}/api/v1/`;
+    } else {
+        // 相对路径：使用 nginx 代理
+        BASE_URL = apiBaseUrl.endsWith('/')
+            ? `${apiBaseUrl}v1/`
+            : `${apiBaseUrl}/v1/`;
+    }
 
     if (showToast) {
         console.log('加载中...'); // 可以替换为实际的 toast 实现

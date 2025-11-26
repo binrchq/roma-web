@@ -49,11 +49,12 @@ steps:
             -e "s|traefik.ingress.kubernetes.io/router.middlewares: roma-redirect-to-https@kubernetescrd|traefik.ingress.kubernetes.io/router.middlewares: $NAMESPACE-redirect-to-https@kubernetescrd|g" \
             -e "s|- roma.binrc.com|- $DOMAIN|g" \
             -e "s|host: roma.binrc.com|host: $DOMAIN|g" \
+            -e "s|value: \"https://roma-api.c.binrc.com\"|value: \"$BACKEND_API_URL\"|g" \
             deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.demo.yaml
       - |
-        # 注入 VITE_API_BASE_URL 环境变量到 Deployment（用于 nginx 反向代理配置）
-        if ! grep -q "VITE_API_BASE_URL" /drone/src/k8s-deployment.demo.yaml; then
-          awk -v api_url="$BACKEND_API_URL" '/ports:/ {print "          env:"; print "            - name: VITE_API_BASE_URL"; print "              value: \"" api_url "\""} 1' /drone/src/k8s-deployment.demo.yaml > /tmp/k8s-deployment.tmp && mv /tmp/k8s-deployment.tmp /drone/src/k8s-deployment.demo.yaml
+        if ! grep -q "value: \"$BACKEND_API_URL\"" /drone/src/k8s-deployment.demo.yaml; then
+          echo "ERROR: Failed to replace VITE_API_BASE_URL in demo deployment"
+          exit 1
         fi
       - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.demo.yaml
       - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE --timeout=3m
@@ -74,11 +75,15 @@ steps:
       - echo "$KUBECONFIG" > /drone/src/kubeconfig
       - |
         sed -e "s|registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:latest|registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:$IMAGE_TAG|g" \
+            -e "s|namespace: roma|namespace: $NAMESPACE|g" \
+            -e "s|traefik.ingress.kubernetes.io/router.middlewares: roma-redirect-to-https@kubernetescrd|traefik.ingress.kubernetes.io/router.middlewares: $NAMESPACE-redirect-to-https@kubernetescrd|g" \
+            -e "s|- roma.binrc.com|- $DOMAIN|g" \
+            -e "s|host: roma.binrc.com|host: $DOMAIN|g" \
             deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.deploy.yaml
       - |
-        # 注入 VITE_API_BASE_URL 环境变量到 Deployment（用于 nginx 反向代理配置）
-        if ! grep -q "VITE_API_BASE_URL" /drone/src/k8s-deployment.deploy.yaml; then
-          awk -v api_url="$BACKEND_API_URL" '/ports:/ {print "          env:"; print "            - name: VITE_API_BASE_URL"; print "              value: \"" api_url "\""} 1' /drone/src/k8s-deployment.deploy.yaml > /tmp/k8s-deployment.tmp && mv /tmp/k8s-deployment.tmp /drone/src/k8s-deployment.deploy.yaml
+        if ! grep -q "value: \"$BACKEND_API_URL\"" /drone/src/k8s-deployment.deploy.yaml; then
+          echo "ERROR: VITE_API_BASE_URL not found or incorrect in prod deployment"
+          exit 1
         fi
       - kubectl --kubeconfig=/drone/src/kubeconfig apply -f /drone/src/k8s-deployment.deploy.yaml
       - kubectl --kubeconfig=/drone/src/kubeconfig rollout status deployment/roma-web -n $NAMESPACE --timeout=3m

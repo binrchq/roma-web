@@ -23,6 +23,9 @@ spec:
           image: registry.cn-hongkong.aliyuncs.com/binrchq/roma-web:latest # 替换为你的镜像
           ports:
             - containerPort: 80
+          env:
+            - name: VITE_API_BASE_URL
+              value: "https://roma-api.c.binrc.com"
           resources:
             requests:
               memory: "64Mi"

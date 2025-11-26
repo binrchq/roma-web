@@ -10,37 +10,24 @@ export const getCurrentEnv = () => {
 
 // 获取API基础地址
 export const getApiBaseUrl = () => {
-    // 优先使用环境变量配置的API地址
+    // 优先使用环境变量配置的API地址（构建时注入）
     const envApiUrl = import.meta.env.VITE_API_BASE_URL;
     if (envApiUrl) {
         return envApiUrl;
     }
 
-    // 根据环境自动判断API地址
+    // 根据 hostname 判断环境（更可靠，不依赖构建时环境变量）
     const hostname = window.location.hostname;
 
-    if (isDevelopment()) {
-        // 开发环境：使用代理或本地后端
+    // 开发环境：使用代理或本地后端
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
         return '/api'; // Vite代理会自动转发到后端
     }
 
-    if (isTest()) {
-        // 测试环境：web-test.meshwise.cn -> plat-test.meshwise.cn
-        return 'https://plat-test.meshwise.cn';
-    }
-
-    if (isStaging()) {
-        // 预发布环境：web-staging.meshwise.cn -> plat-staging.meshwise.cn
-        return 'https://plat-staging.meshwise.cn';
-    }
-
-    if (isProduction()) {
-        // 生产环境：web.meshwise.cn -> plat.meshwise.cn
-        return 'https://plat.meshwise.cn';
-    }
-
-    // 默认开发环境地址
-    return 'http://localhost:8112';
+    // 生产环境：使用相对路径，由 nginx 代理处理
+    // 这样可以通过 nginx 配置和 k8s 环境变量灵活切换后端地址
+    // 避免硬编码后端地址，提高部署灵活性
+    return '/api';
 };
 
 

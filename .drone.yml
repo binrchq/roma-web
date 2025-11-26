@@ -49,6 +49,7 @@ steps:
             -e "s|traefik.ingress.kubernetes.io/router.middlewares: roma-redirect-to-https@kubernetescrd|traefik.ingress.kubernetes.io/router.middlewares: $NAMESPACE-redirect-to-https@kubernetescrd|g" \
             -e "s|- roma.binrc.com|- $DOMAIN|g" \
             -e "s|host: roma.binrc.com|host: $DOMAIN|g" \
+            -e "s|value: \"production\"|value: \"demo\"|g" \
             -e "s|value: \"https://roma-api.c.binrc.com\"|value: \"$BACKEND_API_URL\"|g" \
             deployment/k8s-deployment.yaml > /drone/src/k8s-deployment.demo.yaml
       - |

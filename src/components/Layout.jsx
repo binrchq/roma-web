@@ -1,6 +1,8 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import * as React from 'react'
 import { api } from '../api/roma'
+import { isProduction } from '@/utils/env'
+import { logger } from '@/utils/logger'
 import RomaLogo from "@/components/ui/roma-logo"
 import {
   Sidebar,
@@ -101,6 +103,12 @@ export default function Layout() {
 
   React.useEffect(() => {
     const fetchGithubData = async () => {
+      // 仅在开发环境获取 GitHub 数据
+      if (isProduction()) {
+        setGithubData({ stars: 0, loading: false })
+        return
+      }
+
       try {
         const response = await fetch('https://api.github.com/repos/binrchq/roma')
         if (response.ok) {
@@ -110,7 +118,7 @@ export default function Layout() {
           setGithubData({ stars: 0, loading: false })
         }
       } catch (error) {
-        console.error('Failed to fetch GitHub data:', error)
+        logger.debug('Failed to fetch GitHub data:', error)
         setGithubData({ stars: 0, loading: false })
       }
     }
@@ -119,7 +127,7 @@ export default function Layout() {
       try {
         setRolesLoading(true)
         const data = await api.getCurrentUser()
-        console.log('GetCurrentUser response:', JSON.stringify(data, null, 2))
+        logger.debug('GetCurrentUser response:', JSON.stringify(data, null, 2))
 
         // 后端返回格式: { user: {...}, roles: [...] }
         // 但 API 封装可能返回的是 data 字段，需要检查实际结构
@@ -132,22 +140,22 @@ export default function Layout() {
         }
 
         if (roles && Array.isArray(roles)) {
-          console.log('User roles:', roles)
+          logger.debug('User roles:', roles)
           const hasSuperRole = roles.some(role => {
             // 处理可能的字段名大小写问题
             const roleName = (role.name || role.Name || '').toLowerCase()
-            console.log('Checking role:', roleName, 'Full role object:', role)
+            logger.debug('Checking role:', roleName, 'Full role object:', role)
             return roleName === 'super'
           })
-          console.log('Is super role:', hasSuperRole)
+          logger.debug('Is super role:', hasSuperRole)
           setIsSuperRole(hasSuperRole)
         } else {
-          console.warn('No roles found in response or roles is not an array. Data:', data)
+          logger.warn('No roles found in response or roles is not an array. Data:', data)
           // 如果 roles 不存在，默认设置为 false
           setIsSuperRole(false)
         }
       } catch (error) {
-        console.error('Failed to fetch user roles:', error)
+        logger.error('Failed to fetch user roles:', error)
         // 出错时默认设置为 false
         setIsSuperRole(false)
       } finally {
@@ -278,59 +286,64 @@ export default function Layout() {
       <SidebarInset>
         <div className="px-4 py-2 border-b flex items-center justify-between">
           <SidebarTrigger className="h-4 w-4 mt-2" />
-          <div className="flex items-center gap-3">
-            <a
-              href="https://github.com/binrchq/roma"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-900 dark:bg-gray-800 text-white hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
-              title="Star on GitHub"
-            >
-              <FaGithub className="h-4 w-4" />
-              <span className="hidden sm:inline">Star</span>
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-current" />
-                <span>{githubData.loading ? '...' : githubData.stars}</span>
-              </div>
-            </a>
-            <Button
-              onClick={() => window.open('https://github.com/binrchq/roma#quick-start', '_blank')}
-              className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-1.5 text-sm font-medium text-white transition-all hover:from-blue-700 hover:to-purple-700 hover:shadow-lg"
-            >
-              <Rocket className="h-4 w-4" />
-              快速部署
-              <ArrowRightIcon className="h-4 w-4" />
-            </Button>
-          </div>
+          {!isProduction() && (
+            <div className="flex items-center gap-3">
+              <a
+                href="https://github.com/binrchq/roma"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-900 dark:bg-gray-800 text-white hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                title="Star on GitHub"
+              >
+                <FaGithub className="h-4 w-4" />
+                <span className="hidden sm:inline">Star</span>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-current" />
+                  <span>{githubData.loading ? '...' : githubData.stars}</span>
+                </div>
+              </a>
+              <Button
+                onClick={() => window.open('https://github.com/binrchq/roma#quick-start', '_blank')}
+                className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-1.5 text-sm font-medium text-white transition-all hover:from-blue-700 hover:to-purple-700 hover:shadow-lg"
+              >
+                <Rocket className="h-4 w-4" />
+                快速部署
+                <ArrowRightIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
         <div className="p-6">
           <Outlet />
         </div>
 
-        {/* Floating Banner in bottom right */}
-        <div className="fixed bottom-6 right-6 z-50 max-w-sm">
-          <Banner
-            show={showBanner}
-            onHide={() => setShowBanner(false)}
-            variant="premium"
-            title="快速部署"
-            description="立即访问 GitHub 获取完整项目源码和部署文档"
-            showShade={true}
-            closable={true}
-            icon={<Rocket className="h-5 w-5" />}
-            size="default"
-            action={
-              <Button
-                onClick={() => window.open('https://github.com/binrchq/roma#quick-start', '_blank')}
-                className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-purple-700 hover:to-pink-700 hover:shadow-lg"
-                variant="ghost"
-              >
-                立即部署
-                <FaArrowCircleRight className="h-4 w-4" />
-              </Button>
-            }
-          />
-        </div>
+        {/* Floating Banner in bottom right - 仅非生产环境显示 */}
+        {!isProduction() && (
+          <div className="fixed bottom-6 right-6 z-50 max-w-sm">
+            <Banner
+              show={showBanner}
+              onHide={() => setShowBanner(false)}
+              variant="premium"
+              title="快速部署"
+              description="立即访问 GitHub 获取完整项目源码和部署文档"
+              showShade={true}
+              closable={true}
+              icon={<Rocket className="h-5 w-5" />}
+              size="default"
+              action={
+                <Button
+                  onClick={() => window.open('https://github.com/binrchq/roma#quick-start', '_blank')}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-purple-700 hover:to-pink-700 hover:shadow-lg"
+                  variant="ghost"
+                >
+                  立即部署
+                  <FaArrowCircleRight className="h-4 w-4" />
+                </Button>
+              }
+            />
+          </div>
+        )}
+
       </SidebarInset>
     </SidebarProvider>
   )
@@ -358,10 +371,10 @@ function UserMenu({ username, email }) {
         const keyData = await api.getMySSHKey()
         setSshKey(keyData)
       } catch (error) {
-        console.error('获取SSH密钥失败:', error)
+        logger.error('获取SSH密钥失败:', error)
       }
     } catch (error) {
-      console.error('获取用户信息失败:', error)
+      logger.error('获取用户信息失败:', error)
     }
   }
 
@@ -393,7 +406,7 @@ function UserMenu({ username, email }) {
       setNewPrivateKey('')
       loadUserInfo()
     } catch (error) {
-      console.error('上传SSH密钥失败:', error)
+      logger.error('上传SSH密钥失败:', error)
       alert('上传SSH密钥失败: ' + (error.message || '未知错误'))
     }
   }
@@ -410,7 +423,7 @@ function UserMenu({ username, email }) {
         loadUserInfo()
       }
     } catch (error) {
-      console.error('生成SSH密钥失败:', error)
+      logger.error('生成SSH密钥失败:', error)
       alert('生成SSH密钥失败: ' + (error.message || '未知错误'))
     }
   }
@@ -433,7 +446,7 @@ function UserMenu({ username, email }) {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('下载私钥失败:', error)
+      logger.error('下载私钥失败:', error)
       alert('下载私钥失败: ' + (error.message || '未知错误'))
     }
   }

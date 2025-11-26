@@ -2,6 +2,7 @@
 // 基于 request.js 的模式，但适配 ROMA API 的认证方式（使用 apikey）
 
 import { getApiBaseUrl } from '@/utils/env'
+import { apiLogger } from '@/utils/logger'
 
 const ensureTrailingSlash = (value) => value.endsWith('/') ? value : `${value}/`;
 const stripLeadingSlash = (value) => value.startsWith('/') ? value.slice(1) : value;
@@ -11,7 +12,7 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
     const BASE_URL = ensureTrailingSlash(apiBaseUrl);
 
     if (showToast) {
-        console.log('加载中...'); // 可以替换为实际的 toast 实现
+        apiLogger.debug('加载中...');
     }
 
     // 设置头部信息
@@ -88,18 +89,18 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
 
         const sanitizedPath = stripLeadingSlash(url);
         const fullUrl = BASE_URL + sanitizedPath + queryString;
-        console.log('[api] Request:', method, fullUrl);
+        apiLogger.log('Request:', method, fullUrl);
 
         fetch(fullUrl, fetchOptions)
             .then(async (response) => {
                 clearTimeout(timeoutId);
 
                 if (response.redirected) {
-                    console.log('[api] Redirected:', response.url);
+                    apiLogger.debug('Redirected:', response.url);
                 }
 
                 if (showToast) {
-                    console.log('加载完成');
+                    apiLogger.debug('加载完成');
                 }
 
                 let res;
@@ -112,10 +113,7 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
                         try {
                             res = await response.json();
                         } catch (jsonError) {
-                            // 如果 json() 失败，可能是响应格式问题
-                            console.error('response.json() 失败:', jsonError);
-                            // 尝试克隆响应并读取文本（但响应体只能读取一次，所以这里会失败）
-                            // 作为备选方案，我们直接抛出错误
+                            apiLogger.error('response.json() 失败:', jsonError);
                             return reject({
                                 message: 'JSON 解析失败，响应可能不是有效的 JSON 格式',
                                 originalError: jsonError
@@ -132,12 +130,11 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
                             try {
                                 res = JSON.parse(text);
                             } catch (parseError) {
-                                // 如果解析失败，输出更多调试信息
-                                console.error('JSON解析失败:', parseError);
-                                console.error('响应文本前200字符:', text.substring(0, 200));
-                                console.error('响应状态:', response.status);
-                                console.error('Content-Type:', contentType);
-                                console.error('响应URL:', BASE_URL + url + queryString);
+                                apiLogger.error('JSON解析失败:', parseError);
+                                apiLogger.debug('响应文本前200字符:', text.substring(0, 200));
+                                apiLogger.debug('响应状态:', response.status);
+                                apiLogger.debug('Content-Type:', contentType);
+                                apiLogger.debug('响应URL:', BASE_URL + url + queryString);
 
                                 // 检查是否是 HTML 响应（可能是错误页面）
                                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
@@ -157,7 +154,7 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
                         }
                     }
                 } catch (error) {
-                    console.error('读取响应失败:', error);
+                    apiLogger.error('读取响应失败:', error);
                     return reject({
                         message: '读取服务器响应失败',
                         originalError: error
@@ -206,7 +203,7 @@ const httpRequest = function (url, paramet, method, showToast = false, publicReq
                     errorMessage = '网络连接失败，请检查网络设置';
                 }
 
-                console.error(errorMessage, err);
+                apiLogger.error(errorMessage, err);
                 return reject({ message: errorMessage, originalError: err });
             });
     });

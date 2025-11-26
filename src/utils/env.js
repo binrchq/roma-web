@@ -1,3 +1,5 @@
+import { envLogger } from './logger';
+
 const PLACEHOLDER_FLAG = 'PLACEHOLDER';
 
 const pickRuntimeValue = (raw) => {
@@ -44,19 +46,17 @@ export const getCurrentEnv = () => {
 export const getApiBaseUrl = () => {
     // 优先级1: 如果有运行时注入配置，优先使用（无论在什么环境访问）
     if (runtimeApiBaseUrl) {
-        console.log('[env] ✓ 使用运行时注入的 API 地址:', runtimeApiBaseUrl);
         return runtimeApiBaseUrl;
     }
 
     // 优先级2: Vite 开发模式（npm run dev）
     if (import.meta.env.DEV) {
-        console.log('[env] ✓ Vite 开发模式，使用代理: /api');
         return '/api';
     }
 
     // 优先级3: 生产构建但在本地访问（用于本地测试）
     if (isLocalhost()) {
-        console.log('[env] ⚠️  本地访问生产构建，使用代理: /api（建议配置 VITE_API_BASE_URL）');
+        envLogger.warn('⚠️  本地访问生产构建，使用代理: /api（建议配置 VITE_API_BASE_URL）');
         return '/api';
     }
 
@@ -93,6 +93,6 @@ export const getEnvConfig = () => ({
 
 export const logEnvInfo = () => {
     if (isDevelopment()) {
-        console.log('🌍 当前环境配置:', getEnvConfig());
+        envLogger.log('🌍 当前环境配置:', getEnvConfig());
     }
 };

@@ -44,6 +44,7 @@ import {
   LogOut,
   Key,
   UserCircle,
+  Folder,
 } from "lucide-react"
 import { FaGithub } from "react-icons/fa"
 import { FaArrowCircleRight } from "react-icons/fa";
@@ -64,7 +65,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-const getNavigation = (isSuper) => [
+const getNavigation = (isSuper, isSystem) => [
   { name: '仪表盘', href: '/dashboard', icon: Home },
   {
     name: '资源管理',
@@ -78,7 +79,8 @@ const getNavigation = (isSuper) => [
       { name: '交换机', href: '/resources/switch', icon: Network },
     ]
   },
-  ...(isSuper ? [
+  ...(isSuper || isSystem ? [
+    { name: '空间管理', href: '/spaces', icon: Folder },
     { name: '用户管理', href: '/users', icon: Users },
     { name: '角色管理', href: '/roles', icon: Shield },
     { name: '审计日志', href: '/logs', icon: FileText },
@@ -99,6 +101,7 @@ export default function Layout() {
   const [githubData, setGithubData] = React.useState({ stars: 0, loading: true })
   const [expandedMenus, setExpandedMenus] = React.useState(new Set())
   const [isSuperRole, setIsSuperRole] = React.useState(false)
+  const [isSystemRole, setIsSystemRole] = React.useState(false)
   const [rolesLoading, setRolesLoading] = React.useState(true)
 
   React.useEffect(() => {
@@ -142,22 +145,25 @@ export default function Layout() {
         if (roles && Array.isArray(roles)) {
           logger.debug('User roles:', roles)
           const hasSuperRole = roles.some(role => {
-            // 处理可能的字段名大小写问题
             const roleName = (role.name || role.Name || '').toLowerCase()
-            logger.debug('Checking role:', roleName, 'Full role object:', role)
             return roleName === 'super'
           })
-          logger.debug('Is super role:', hasSuperRole)
+          const hasSystemRole = roles.some(role => {
+            const roleName = (role.name || role.Name || '').toLowerCase()
+            return roleName === 'system'
+          })
+          logger.debug('Is super role:', hasSuperRole, 'Is system role:', hasSystemRole)
           setIsSuperRole(hasSuperRole)
+          setIsSystemRole(hasSystemRole)
         } else {
           logger.warn('No roles found in response or roles is not an array. Data:', data)
-          // 如果 roles 不存在，默认设置为 false
           setIsSuperRole(false)
+          setIsSystemRole(false)
         }
       } catch (error) {
         logger.error('Failed to fetch user roles:', error)
-        // 出错时默认设置为 false
         setIsSuperRole(false)
+        setIsSystemRole(false)
       } finally {
         setRolesLoading(false)
       }
@@ -186,7 +192,7 @@ export default function Layout() {
             </div>
             <SidebarGroupContent>
               <SidebarMenu>
-                {getNavigation(isSuperRole).map((item) => {
+                {getNavigation(isSuperRole, isSystemRole).map((item) => {
                   if (item.children) {
                     const isExpanded = expandedMenus.has(item.name)
                     const hasActiveChild = item.children.some(child => location.pathname === child.href)

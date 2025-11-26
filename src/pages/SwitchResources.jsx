@@ -58,9 +58,12 @@ export default function SwitchResources() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedResource, setSelectedResource] = useState(null)
   const [formData, setFormData] = useState({})
+  const [spaces, setSpaces] = useState([])
+  const [selectedSpace, setSelectedSpace] = useState('')
 
   useEffect(() => {
     loadResources()
+    loadSpaces()
   }, [page])
 
   const loadResources = async () => {
@@ -80,6 +83,25 @@ export default function SwitchResources() {
       setTotal(0)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadSpaces = async () => {
+    try {
+      const data = await api.getSpaces()
+      const spacesList = Array.isArray(data) ? data : []
+      setSpaces(spacesList)
+      if (!selectedSpace && spacesList.length > 0) {
+        const defaultSpace = spacesList.find(s => s.name === 'default')
+        if (defaultSpace) {
+          setSelectedSpace(defaultSpace.id.toString())
+        } else {
+          setSelectedSpace(spacesList[0].id.toString())
+        }
+      }
+    } catch (error) {
+      console.error('加载空间列表失败:', error)
+      setSpaces([])
     }
   }
 
@@ -160,17 +182,31 @@ export default function SwitchResources() {
       if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
       if (processedData.port_actual !== undefined && processedData.port_actual !== '') processedData.port_actual = Number(processedData.port_actual)
       if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
-      
+
+      // 添加空间ID
+      const requestData = { ...processedData, type: 'switch' }
+      if (selectedSpace) {
+        requestData.space_id = parseInt(selectedSpace)
+      } else if (spaces.length > 0) {
+        const defaultSpace = spaces.find(s => s.name === 'default')
+        if (defaultSpace) {
+          requestData.space_id = defaultSpace.id
+        } else {
+          requestData.space_id = spaces[0].id
+        }
+      }
+
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, { ...processedData, type: 'switch' })
+        await api.updateResource(selectedResource.id, requestData)
       } else {
-        await api.createResource({ ...processedData, type: 'switch' })
+        await api.createResource(requestData)
       }
       await loadResources()
       setEditDialogOpen(false)
       setAddDialogOpen(false)
       setFormData({})
       setSelectedResource(null)
+      setSelectedSpace('')
     } catch (error) {
       console.error('保存资源失败:', error)
       alert('保存失败: ' + (error.message || '未知错误'))
@@ -196,6 +232,10 @@ export default function SwitchResources() {
         </div>
         <Button onClick={() => {
           setFormData({ type: 'switch' })
+          if (spaces.length > 0) {
+            const defaultSpace = spaces.find(s => s.name === 'default')
+            setSelectedSpace(defaultSpace ? defaultSpace.id.toString() : spaces[0].id.toString())
+          }
           setAddDialogOpen(true)
         }} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -417,10 +457,34 @@ export default function SwitchResources() {
                   </div>
                 ))
               })()}
+              {/* 空间选择 */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间</h3>
+                <div className="grid grid-cols-4 gap-4">
+                  <Label className="text-right pt-2">空间</Label>
+                  <div className="col-span-3 space-y-1">
+                    <select
+                      className="w-full px-3 py-2 border rounded-md bg-white"
+                      value={selectedSpace}
+                      onChange={(e) => setSelectedSpace(e.target.value)}
+                    >
+                      {spaces.map((space) => (
+                        <option key={space.id} value={space.id.toString()}>
+                          {space.name} {space.name === 'default' ? '(默认)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">选择资源所属空间，不选择则使用默认空间</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
+            <Button variant="outline" onClick={() => {
+              setEditDialogOpen(false)
+              setSelectedSpace('')
+            }}>取消</Button>
             <Button onClick={handleSave}>保存</Button>
           </DialogFooter>
         </DialogContent>
@@ -476,17 +540,39 @@ export default function SwitchResources() {
                 </div>
               ))
             })()}
+            {/* 空间选择 */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间</h3>
+              <div className="grid grid-cols-4 gap-4">
+                <Label className="text-right pt-2">空间</Label>
+                <div className="col-span-3 space-y-1">
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    value={selectedSpace}
+                    onChange={(e) => setSelectedSpace(e.target.value)}
+                  >
+                    {spaces.map((space) => (
+                      <option key={space.id} value={space.id.toString()}>
+                        {space.name} {space.name === 'default' ? '(默认)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">选择资源所属空间，不选择则使用默认空间</p>
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setAddDialogOpen(false)
               setFormData({})
+              setSelectedSpace('')
             }}>取消</Button>
             <Button onClick={handleSave}>创建</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog >
-    </div >
+      </Dialog>
+    </div>
   )
 }
 

@@ -61,10 +61,13 @@ export default function LinuxResources() {
   const [formData, setFormData] = useState({})
   const [roles, setRoles] = useState([])
   const [selectedRole, setSelectedRole] = useState('')
+  const [spaces, setSpaces] = useState([])
+  const [selectedSpace, setSelectedSpace] = useState('')
 
   useEffect(() => {
     loadResources()
     loadRoles()
+    loadSpaces()
   }, [page])
 
   const loadRoles = async () => {
@@ -74,6 +77,26 @@ export default function LinuxResources() {
     } catch (error) {
       console.error('加载角色列表失败:', error)
       setRoles([])
+    }
+  }
+
+  const loadSpaces = async () => {
+    try {
+      const data = await api.getSpaces()
+      const spacesList = Array.isArray(data) ? data : []
+      setSpaces(spacesList)
+      // 如果没有选择空间，默认选择 default 空间
+      if (!selectedSpace && spacesList.length > 0) {
+        const defaultSpace = spacesList.find(s => s.name === 'default')
+        if (defaultSpace) {
+          setSelectedSpace(defaultSpace.id.toString())
+        } else {
+          setSelectedSpace(spacesList[0].id.toString())
+        }
+      }
+    } catch (error) {
+      console.error('加载空间列表失败:', error)
+      setSpaces([])
     }
   }
 
@@ -182,10 +205,21 @@ export default function LinuxResources() {
       if (processedData.port_actual !== undefined && processedData.port_actual !== '') processedData.port_actual = Number(processedData.port_actual)
       if (processedData.port_ipv6 !== undefined && processedData.port_ipv6 !== '') processedData.port_ipv6 = Number(processedData.port_ipv6)
 
-      // 构建请求数据，包含角色信息
+      // 构建请求数据，包含角色和空间信息
       const requestData = { ...processedData, type: 'linux' }
       if (selectedRole) {
         requestData.role = selectedRole
+      }
+      // 如果选择了空间，添加到请求数据中；否则使用 default 空间
+      if (selectedSpace) {
+        requestData.space_id = parseInt(selectedSpace)
+      } else if (spaces.length > 0) {
+        const defaultSpace = spaces.find(s => s.name === 'default')
+        if (defaultSpace) {
+          requestData.space_id = defaultSpace.id
+        } else {
+          requestData.space_id = spaces[0].id
+        }
       }
 
       if (selectedResource) {
@@ -225,6 +259,11 @@ export default function LinuxResources() {
         <Button onClick={() => {
           setFormData({ type: 'linux' })
           setSelectedRole('')
+          // 默认选择 default 空间
+          if (spaces.length > 0) {
+            const defaultSpace = spaces.find(s => s.name === 'default')
+            setSelectedSpace(defaultSpace ? defaultSpace.id.toString() : spaces[0].id.toString())
+          }
           setAddDialogOpen(true)
         }} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -446,9 +485,26 @@ export default function LinuxResources() {
                   </div>
                 ))
               })()}
-              {/* 角色选择 */}
+              {/* 空间和角色选择 */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">角色分配</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间与角色</h3>
+                <div className="grid grid-cols-4 gap-4">
+                  <Label className="text-right pt-2">空间</Label>
+                  <div className="col-span-3 space-y-1">
+                    <select
+                      className="w-full px-3 py-2 border rounded-md bg-white"
+                      value={selectedSpace}
+                      onChange={(e) => setSelectedSpace(e.target.value)}
+                    >
+                      {spaces.map((space) => (
+                        <option key={space.id} value={space.id.toString()}>
+                          {space.name} {space.name === 'default' ? '(默认)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">选择资源所属空间，不选择则使用默认空间</p>
+                  </div>
+                </div>
                 <div className="grid grid-cols-4 gap-4">
                   <Label className="text-right pt-2">角色</Label>
                   <div className="col-span-3 space-y-1">
@@ -530,9 +586,26 @@ export default function LinuxResources() {
                 </div>
               ))
             })()}
-            {/* 角色选择 */}
+            {/* 空间和角色选择 */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">角色分配</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间与角色</h3>
+              <div className="grid grid-cols-4 gap-4">
+                <Label className="text-right pt-2">空间</Label>
+                <div className="col-span-3 space-y-1">
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    value={selectedSpace}
+                    onChange={(e) => setSelectedSpace(e.target.value)}
+                  >
+                    {spaces.map((space) => (
+                      <option key={space.id} value={space.id.toString()}>
+                        {space.name} {space.name === 'default' ? '(默认)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">选择资源所属空间，不选择则使用默认空间</p>
+                </div>
+              </div>
               <div className="grid grid-cols-4 gap-4">
                 <Label className="text-right pt-2">角色</Label>
                 <div className="col-span-3 space-y-1">
@@ -558,6 +631,7 @@ export default function LinuxResources() {
               setAddDialogOpen(false)
               setFormData({})
               setSelectedRole('')
+              setSelectedSpace('')
             }}>取消</Button>
             <Button onClick={handleSave}>创建</Button>
           </DialogFooter>

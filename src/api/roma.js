@@ -84,6 +84,13 @@ const getMySSHKey = () => httpRequest('ssh-keys/me', {}, 'GET', isShowInfoToast,
 const uploadSSHKey = (data) => httpRequest('ssh-keys/me/upload', data, 'POST', isShowInfoToast, isPublicRequest)
 const generateSSHKey = () => httpRequest('ssh-keys/me/generate', {}, 'POST', isShowInfoToast, isPublicRequest)
 
+// 空间相关
+const getSpaces = () => httpRequest('spaces', {}, 'GET', isShowInfoToast, isPublicRequest)
+const getSpaceById = (id) => httpRequest(`spaces/${id}`, {}, 'GET', isShowInfoToast, isPublicRequest)
+const createSpace = (data) => httpRequest('spaces', data, 'POST', isShowInfoToast, isPublicRequest)
+const addSpaceMember = (id, data) => httpRequest(`spaces/${id}/members`, data, 'POST', isShowInfoToast, isPublicRequest)
+const removeSpaceMember = (id, data) => httpRequest(`spaces/${id}/members`, data, 'DELETE', isShowInfoToast, isPublicRequest)
+
 export const api = {
     // 认证相关
     login,
@@ -135,6 +142,13 @@ export const api = {
     getMySSHKey,
     uploadSSHKey,
     generateSSHKey,
+
+    // 空间相关
+    getSpaces,
+    getSpaceById,
+    createSpace,
+    addSpaceMember,
+    removeSpaceMember,
 }
 
 export default api

@@ -292,7 +292,10 @@ export default function Users() {
           <h1 className="text-3xl font-bold text-gray-900">用户管理</h1>
           <p className="mt-2 text-sm text-gray-600">管理系统用户和访问权限</p>
         </div>
-        <Button onClick={openCreateDialog} className="bg-primary-600 hover:bg-primary-700">
+        <Button
+          onClick={openCreateDialog}
+          className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-4 py-2 text-white shadow-lg transition-all hover:scale-[1.02] hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600"
+        >
           添加用户
         </Button>
       </div>

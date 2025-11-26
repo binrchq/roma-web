@@ -10,12 +10,15 @@ export const getCurrentEnv = () => {
 
 // 获取API基础地址
 // 使用占位符 'VITE_API_BASE_URL_PLACEHOLDER'，在容器启动时由 docker-entrypoint.sh 替换
+// 注意：占位符必须是一个完整的字符串常量，不能包含变量或表达式，以确保构建后能被正确替换
 export const getApiBaseUrl = () => {
     // 运行时环境变量占位符（会被 docker-entrypoint.sh 替换）
+    // 使用单引号字符串，确保构建后格式一致
     const runtimeApiUrl = 'VITE_API_BASE_URL_PLACEHOLDER';
 
     // 如果占位符没有被替换（开发环境），使用构建时环境变量或默认值
-    if (runtimeApiUrl === 'VITE_API_BASE_URL_PLACEHOLDER') {
+    // 检查占位符是否仍然存在（可能被压缩成不同格式）
+    if (runtimeApiUrl === 'VITE_API_BASE_URL_PLACEHOLDER' || runtimeApiUrl.includes('PLACEHOLDER')) {
         // 构建时注入的环境变量
         const envApiUrl = import.meta.env.VITE_API_BASE_URL;
         if (envApiUrl) {

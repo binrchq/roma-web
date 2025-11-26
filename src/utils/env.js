@@ -9,25 +9,31 @@ export const getCurrentEnv = () => {
 };
 
 // 获取API基础地址
+// 使用占位符 'VITE_API_BASE_URL_PLACEHOLDER'，在容器启动时由 docker-entrypoint.sh 替换
 export const getApiBaseUrl = () => {
-    // 优先使用环境变量配置的API地址（构建时注入）
-    const envApiUrl = import.meta.env.VITE_API_BASE_URL;
-    if (envApiUrl) {
-        return envApiUrl;
+    // 运行时环境变量占位符（会被 docker-entrypoint.sh 替换）
+    const runtimeApiUrl = 'VITE_API_BASE_URL_PLACEHOLDER';
+
+    // 如果占位符没有被替换（开发环境），使用构建时环境变量或默认值
+    if (runtimeApiUrl === 'VITE_API_BASE_URL_PLACEHOLDER') {
+        // 构建时注入的环境变量
+        const envApiUrl = import.meta.env.VITE_API_BASE_URL;
+        if (envApiUrl) {
+            return envApiUrl;
+        }
+
+        // 开发环境：使用代理或本地后端
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+            return '/api'; // Vite代理会自动转发到后端
+        }
+
+        // 默认：使用相对路径，由 nginx 代理处理
+        return '/api';
     }
 
-    // 根据 hostname 判断环境（更可靠，不依赖构建时环境变量）
-    const hostname = window.location.hostname;
-
-    // 开发环境：使用代理或本地后端
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
-        return '/api'; // Vite代理会自动转发到后端
-    }
-
-    // 生产环境：使用相对路径，由 nginx 代理处理
-    // 这样可以通过 nginx 配置和 k8s 环境变量灵活切换后端地址
-    // 避免硬编码后端地址，提高部署灵活性
-    return '/api';
+    // 返回运行时替换的值
+    return runtimeApiUrl;
 };
 
 

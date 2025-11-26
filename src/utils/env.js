@@ -4,8 +4,18 @@
  */
 
 // 获取当前环境
+// 使用占位符 'VITE_ENV_PLACEHOLDER'，在容器启动时由 docker-entrypoint.sh 替换
 export const getCurrentEnv = () => {
-    return import.meta.env.VITE_ENV || 'development';
+    // 运行时环境变量占位符（会被 docker-entrypoint.sh 替换）
+    const runtimeEnv = 'VITE_ENV_PLACEHOLDER';
+
+    // 如果占位符没有被替换，使用构建时环境变量或默认值
+    if (runtimeEnv === 'VITE_ENV_PLACEHOLDER' || runtimeEnv.includes('PLACEHOLDER')) {
+        return import.meta.env.VITE_ENV || 'development';
+    }
+
+    // 返回运行时替换的值
+    return runtimeEnv;
 };
 
 // 获取API基础地址

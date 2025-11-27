@@ -218,12 +218,27 @@ export default function Users() {
     try {
       setFormSubmitting(true)
       const payload = buildPayload(formData, { requirePassword: true })
-      await api.createUser(payload)
-      await loadUsers()
-      closeCreateDialog()
-      window.alert('用户创建成功')
+      const result = await api.createUser(payload)
+      logger.debug('创建用户成功:', result)
+      
+      // 检查是否有警告信息
+      if (result && typeof result === 'object' && result.warning) {
+        await loadUsers()
+        closeCreateDialog()
+        window.alert(`用户创建成功，但有警告：${result.warning}`)
+      } else {
+        await loadUsers()
+        closeCreateDialog()
+        window.alert('用户创建成功')
+      }
     } catch (error) {
       logger.error('创建用户失败:', error)
+      // 即使显示错误，也尝试刷新列表（用户可能已经创建成功）
+      try {
+        await loadUsers()
+      } catch (reloadError) {
+        logger.error('刷新用户列表失败:', reloadError)
+      }
       window.alert(getErrorMessage(error))
     } finally {
       setFormSubmitting(false)

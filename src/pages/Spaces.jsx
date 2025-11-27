@@ -45,15 +45,15 @@ export default function Spaces() {
   const [formData, setFormData] = useState(initialFormState)
   const [formErrors, setFormErrors] = useState({})
   const [formSubmitting, setFormSubmitting] = useState(false)
-  
+
   const [users, setUsers] = useState([])
-  const [roles, setRoles] = useState([])
-  const [memberFormData, setMemberFormData] = useState({ user_id: '', role_id: '' })
+  const [memberFormData, setMemberFormData] = useState({ user_id: '' })
+  const [userDetailDialogOpen, setUserDetailDialogOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
 
   useEffect(() => {
     loadSpaces()
     loadUsers()
-    loadRoles()
   }, [])
 
   const loadSpaces = async () => {
@@ -78,14 +78,6 @@ export default function Spaces() {
     }
   }
 
-  const loadRoles = async () => {
-    try {
-      const data = await api.getRoles()
-      setRoles(Array.isArray(data) ? data : [])
-    } catch (error) {
-      logger.error('加载角色失败:', error)
-    }
-  }
 
   const filteredSpaces = useMemo(() => {
     return spaces.filter((space) => {
@@ -113,14 +105,14 @@ export default function Spaces() {
 
   const openMemberDialog = (space) => {
     setSelectedSpace(space)
-    setMemberFormData({ user_id: '', role_id: '' })
+    setMemberFormData({ user_id: '' })
     setMemberDialogOpen(true)
   }
 
   const closeMemberDialog = () => {
     setMemberDialogOpen(false)
     setSelectedSpace(null)
-    setMemberFormData({ user_id: '', role_id: '' })
+    setMemberFormData({ user_id: '' })
   }
 
   const handleInputChange = (field, value) => {
@@ -168,25 +160,38 @@ export default function Spaces() {
   }
 
   const handleAddMember = async () => {
-    if (!memberFormData.user_id || !memberFormData.role_id) {
-      alert('请选择用户和角色')
+    if (!memberFormData.user_id) {
+      alert('请选择用户')
       return
     }
 
     try {
-      await api.addSpaceMember(selectedSpace.id, {
+      const result = await api.addSpaceMember(selectedSpace.id, {
         user_id: parseInt(memberFormData.user_id),
-        role_id: parseInt(memberFormData.role_id),
       })
+      logger.debug('添加成员成功:', result)
+
       // 重新加载空间详情以更新成员列表
-      const spaceDetail = await api.getSpaceById(selectedSpace.id)
-      setSelectedSpace(spaceDetail)
-      await loadSpaces()
-      // 清空表单
-      setMemberFormData({ user_id: '', role_id: '' })
+      try {
+        const spaceDetail = await api.getSpaceById(selectedSpace.id)
+        setSelectedSpace(spaceDetail)
+        await loadSpaces()
+        // 清空表单
+        setMemberFormData({ user_id: '' })
+      } catch (reloadError) {
+        logger.error('重新加载空间详情失败:', reloadError)
+        // 即使重新加载失败，也清空表单并提示用户手动刷新
+        setMemberFormData({ user_id: '' })
+        alert('成员已添加，但刷新列表失败，请手动刷新页面')
+      }
     } catch (error) {
       logger.error('添加成员失败:', error)
-      alert('添加成员失败: ' + (error.message || '未知错误'))
+      // 检查是否是重复添加的错误
+      if (error.message && error.message.includes('UNIQUE constraint') || error.message.includes('duplicate')) {
+        alert('该用户已经是空间成员')
+      } else {
+        alert('添加成员失败: ' + (error.message || '未知错误'))
+      }
     }
   }
 
@@ -241,7 +246,7 @@ export default function Spaces() {
             <TableRow>
               <TableHead>名称</TableHead>
               <TableHead>描述</TableHead>
-              <TableHead>成员数</TableHead>
+              <TableHead>成员</TableHead>
               <TableHead>状态</TableHead>
               <TableHead>创建时间</TableHead>
               <TableHead>操作</TableHead>
@@ -261,44 +266,38 @@ export default function Spaces() {
                   <TableCell>{space.description || '-'}</TableCell>
                   <TableCell>
                     {space.members && space.members.length > 0 ? (
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium text-gray-700 mb-1">
-                          {space.members.length} 个成员
-                        </div>
-                        <div className="max-h-32 overflow-y-auto space-y-1">
+                      <div className="border rounded-md p-2 min-h-[60px] max-h-32 overflow-y-auto">
+                        <div className="flex flex-wrap gap-2">
                           {space.members.map((member) => (
-                            <div key={member.id} className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 truncate">
-                                  {member.user?.username || member.user?.name || `用户${member.user_id}`}
-                                </div>
-                                {member.role && (
-                                  <div className="text-gray-500 text-xs truncate">
-                                    角色: {member.role.name}
-                                  </div>
-                                )}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveMember(space.id, member.user_id)}
-                                className="h-5 w-5 p-0 text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
-                                title="移除成员"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            <button
+                              key={member.id}
+                              onClick={async () => {
+                                try {
+                                  const userDetail = await api.getUserById(member.user_id)
+                                  setSelectedUser(userDetail)
+                                  setUserDetailDialogOpen(true)
+                                } catch (error) {
+                                  logger.error('获取用户详情失败:', error)
+                                  // 如果获取失败，使用已有信息
+                                  setSelectedUser(member.user)
+                                  setUserDetailDialogOpen(true)
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200 transition-colors cursor-pointer"
+                              title="点击查看用户详情"
+                            >
+                              {member.user?.username || member.user?.name || `用户${member.user_id}`}
+                            </button>
                           ))}
                         </div>
                       </div>
                     ) : (
-                      <span className="text-gray-400">0 个成员</span>
+                      <span className="text-gray-400">暂无成员</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      space.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs ${space.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
                       {space.is_active ? '启用' : '禁用'}
                     </span>
                   </TableCell>
@@ -389,11 +388,6 @@ export default function Spaces() {
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
                           {member.user?.email && <span>{member.user.email}</span>}
-                          {member.role && (
-                            <span className="ml-2">
-                              角色: <span className="font-medium">{member.role.name}</span>
-                            </span>
-                          )}
                         </div>
                       </div>
                       <Button
@@ -436,27 +430,9 @@ export default function Spaces() {
                   </Select>
                   {selectedSpace?.members && selectedSpace.members.length > 0 && (
                     <p className="text-xs text-gray-500 mt-1">
-                      已过滤已在空间中的用户
+                      已过滤已在空间中的用户。成员在空间中的权限基于用户本身的角色。
                     </p>
                   )}
-                </div>
-                <div>
-                  <Label htmlFor="role_id">角色 *</Label>
-                  <Select
-                    value={memberFormData.role_id}
-                    onValueChange={(value) => setMemberFormData({ ...memberFormData, role_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择角色" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id.toString()}>
-                          {role.name} {role.desc && `- ${role.desc}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
             </div>
@@ -465,11 +441,50 @@ export default function Spaces() {
             <Button variant="outline" onClick={closeMemberDialog}>
               关闭
             </Button>
-            <Button 
+            <Button
               onClick={handleAddMember}
-              disabled={!memberFormData.user_id || !memberFormData.role_id}
+              disabled={!memberFormData.user_id}
             >
               添加成员
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 用户详情对话框 */}
+      <Dialog open={userDetailDialogOpen} onOpenChange={setUserDetailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>用户信息</DialogTitle>
+            <DialogDescription>查看用户的基本信息</DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4 py-4">
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">用户名</Label>
+                <div className="mt-1 text-sm text-gray-900">{selectedUser.username || '-'}</div>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">姓名</Label>
+                <div className="mt-1 text-sm text-gray-900">{selectedUser.name || '-'}</div>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">昵称</Label>
+                <div className="mt-1 text-sm text-gray-900">{selectedUser.nickname || '-'}</div>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">邮箱</Label>
+                <div className="mt-1 text-sm text-gray-900">{selectedUser.email || '-'}</div>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">用户ID</Label>
+                <div className="mt-1 text-sm text-gray-900">{selectedUser.id || '-'}</div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserDetailDialogOpen(false)}>
+              关闭
             </Button>
           </DialogFooter>
         </DialogContent>

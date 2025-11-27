@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ListFilter, Columns, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 
-const allColumns = ["name", "host", "port", "description", "createdAt", "status", "actions"]
+const allColumns = ["name", "host", "port", "description", "role", "space", "createdAt", "status", "actions"]
 
 const getResourceFields = () => {
   return [
@@ -46,6 +46,8 @@ export default function WindowsResources() {
   const [loading, setLoading] = useState(true)
   const [nameFilter, setNameFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [roleFilter, setRoleFilter] = useState("all")
+  const [spaceFilter, setSpaceFilter] = useState("all")
   const [visibleColumns, setVisibleColumns] = useState(new Set(allColumns))
   
   const [page, setPage] = useState(1)
@@ -104,6 +106,31 @@ export default function WindowsResources() {
     }
   }
 
+  // 获取所有角色和空间列表（用于过滤器）
+  const allRoles = useMemo(() => {
+    const roleSet = new Set()
+    resources.forEach(resource => {
+      if (resource.roles && Array.isArray(resource.roles)) {
+        resource.roles.forEach(role => {
+          if (role && role.name) {
+            roleSet.add(role.name)
+          }
+        })
+      }
+    })
+    return Array.from(roleSet)
+  }, [resources])
+
+  const allSpaces = useMemo(() => {
+    const spaceSet = new Set()
+    resources.forEach(resource => {
+      if (resource.space && resource.space.name) {
+        spaceSet.add(resource.space.name)
+      }
+    })
+    return Array.from(spaceSet)
+  }, [resources])
+
   const filteredResources = useMemo(() => {
     let filtered = resources.filter((resource) => {
       const nameMatch = nameFilter === "" ||
@@ -114,14 +141,23 @@ export default function WindowsResources() {
         (statusFilter === "enabled" && isEnabled) ||
         (statusFilter === "disabled" && !isEnabled)
 
-      return nameMatch && statusMatch
+      // 角色过滤
+      const roleMatch = roleFilter === "all" ||
+        (resource.roles && Array.isArray(resource.roles) && 
+         resource.roles.some(r => r && r.name === roleFilter))
+
+      // 空间过滤
+      const spaceMatch = spaceFilter === "all" ||
+        (resource.space && resource.space.name === spaceFilter)
+
+      return nameMatch && statusMatch && roleMatch && spaceMatch
     })
     
     const start = (page - 1) * pageSize
     const end = start + pageSize
     setTotal(filtered.length)
     return filtered.slice(start, end)
-  }, [resources, nameFilter, statusFilter, page, pageSize])
+  }, [resources, nameFilter, statusFilter, roleFilter, spaceFilter, page, pageSize])
 
   const toggleColumn = (column) => {
     setVisibleColumns((prev) => {
@@ -289,6 +325,80 @@ export default function WindowsResources() {
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* 角色筛选 */}
+          {allRoles.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ListFilter className="h-4 w-4" />
+                  <span>角色</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>筛选角色</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={roleFilter === "all"}
+                  onCheckedChange={() => {
+                    setRoleFilter("all")
+                    setPage(1)
+                  }}
+                >
+                  全部
+                </DropdownMenuCheckboxItem>
+                {allRoles.map((role) => (
+                  <DropdownMenuCheckboxItem
+                    key={role}
+                    checked={roleFilter === role}
+                    onCheckedChange={() => {
+                      setRoleFilter(role)
+                      setPage(1)
+                    }}
+                  >
+                    {role}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* 空间筛选 */}
+          {allSpaces.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ListFilter className="h-4 w-4" />
+                  <span>空间</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>筛选空间</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={spaceFilter === "all"}
+                  onCheckedChange={() => {
+                    setSpaceFilter("all")
+                    setPage(1)
+                  }}
+                >
+                  全部
+                </DropdownMenuCheckboxItem>
+                {allSpaces.map((space) => (
+                  <DropdownMenuCheckboxItem
+                    key={space}
+                    checked={spaceFilter === space}
+                    onCheckedChange={() => {
+                      setSpaceFilter(space)
+                      setPage(1)
+                    }}
+                  >
+                    {space}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         <DropdownMenu>
@@ -312,9 +422,11 @@ export default function WindowsResources() {
                   column === "host" ? "地址" :
                     column === "port" ? "端口" :
                       column === "description" ? "描述" :
-                        column === "createdAt" ? "创建时间" :
-                          column === "status" ? "状态" :
-                            column === "actions" ? "操作" : column}
+                        column === "role" ? "角色" :
+                          column === "space" ? "空间" :
+                            column === "createdAt" ? "创建时间" :
+                              column === "status" ? "状态" :
+                                column === "actions" ? "操作" : column}
               </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuContent>

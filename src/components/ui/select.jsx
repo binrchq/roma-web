@@ -55,14 +55,16 @@ SelectTrigger.displayName = "SelectTrigger"
 
 const SelectValue = ({ placeholder, ...props }) => {
     const context = React.useContext(SelectContext)
-    if (!context) return <span {...props}>{placeholder || "选择..."}</span>
+    if (!context) return <span className="text-gray-500" {...props}>{placeholder || "选择..."}</span>
 
     const { selectedValue } = context
     if (!selectedValue) {
-        return <span {...props}>{placeholder || "选择..."}</span>
+        return <span className="text-gray-500" {...props}>{placeholder || "选择..."}</span>
     }
 
-    return <span {...props}>{props.children}</span>
+    // 如果有 children，使用 children；否则显示选中的值
+    const displayText = props.children || selectedValue
+    return <span className="text-gray-900 dark:text-gray-100 font-medium" {...props}>{displayText}</span>
 }
 
 const SelectContent = React.forwardRef(({ className, children, ...props }, ref) => {
@@ -132,11 +134,11 @@ const SelectItem = React.forwardRef(({ className, children, value, ...props }, r
             ref={ref}
             className={cn(
                 "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none",
-                "hover:bg-gray-100 hover:text-gray-900",
-                "focus:bg-gray-100 focus:text-gray-900",
-                "dark:hover:bg-gray-700 dark:hover:text-gray-100",
-                "dark:focus:bg-gray-700 dark:focus:text-gray-100",
-                isSelected && "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100",
+                "hover:bg-blue-50 hover:text-blue-900",
+                "focus:bg-blue-50 focus:text-blue-900",
+                "dark:hover:bg-blue-900 dark:hover:text-blue-100",
+                "dark:focus:bg-blue-900 dark:focus:text-blue-100",
+                isSelected && "bg-blue-100 text-blue-900 font-medium border-l-2 border-blue-600 dark:bg-blue-800 dark:text-blue-100",
                 className
             )}
             onClick={() => handleSelect(value)}

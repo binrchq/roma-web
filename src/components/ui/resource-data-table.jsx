@@ -78,6 +78,8 @@ export const ResourceDataTable = ({
     { key: "host", label: "地址" },
     { key: "port", label: "端口" },
     { key: "description", label: "描述" },
+    { key: "role", label: "角色" },
+    { key: "space", label: "空间" },
     { key: "createdAt", label: "创建时间" },
     { key: "status", label: "状态" },
     { key: "actions", label: "操作" },
@@ -161,6 +163,34 @@ export const ResourceDataTable = ({
                     {visibleColumns.has("description") && (
                       <TableCell className="max-w-xs truncate">
                         {resource.description || "-"}
+                      </TableCell>
+                    )}
+
+                    {visibleColumns.has("role") && (
+                      <TableCell>
+                        {resource.roles && Array.isArray(resource.roles) && resource.roles.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {resource.roles.map((role, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {role && role.name ? role.name : '-'}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                    )}
+
+                    {visibleColumns.has("space") && (
+                      <TableCell>
+                        {resource.space && resource.space.name ? (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                            {resource.space.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
                     )}
 

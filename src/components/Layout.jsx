@@ -52,6 +52,7 @@ import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
 import { BoltNewBadge } from "@/components/ui/bolt-new-badge"
 import { GlowEffect } from "@/components/ui/glow-effect"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -464,7 +465,11 @@ function UserMenu({ username, email }) {
         <DropdownMenuTrigger asChild>
           <SidebarMenuButton className="w-full justify-between gap-3 h-12">
             <div className="flex items-center gap-2">
-              <User className="h-5 w-5 rounded-md" />
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                  {username ? username.charAt(0).toUpperCase() : 'U'}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex flex-col items-start">
                 <span className="text-sm font-medium">{username}</span>
                 <span className="text-xs text-muted-foreground">{email}</span>

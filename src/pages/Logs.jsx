@@ -49,30 +49,30 @@ export default function Logs() {
       <div className="mb-6 flex gap-2">
         <button
           onClick={() => setLogType('audit')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
             logType === 'audit'
-              ? 'bg-primary-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
           }`}
         >
           审计日志
         </button>
         <button
           onClick={() => setLogType('access')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
             logType === 'access'
-              ? 'bg-primary-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
           }`}
         >
           访问日志
         </button>
         <button
           onClick={() => setLogType('credential')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
             logType === 'credential'
-              ? 'bg-primary-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
           }`}
         >
           凭证日志

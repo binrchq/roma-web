@@ -158,18 +158,41 @@ export default function Settings() {
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-gray-500">连接地址:</span>
-                      <span className="ml-2 font-mono font-medium text-gray-900">{systemInfo.ssh_service.address || '-'}</span>
+                      <span className="ml-2 font-mono font-medium text-gray-900">
+                        {(() => {
+                          // 从当前 URL 提取域名
+                          const hostname = window.location.hostname
+                          const port = systemInfo.ssh_service.port || '2200'
+                          return `${hostname}:${port}`
+                        })()}
+                      </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className="text-gray-500">主机:</span>
-                        <span className="ml-2 font-mono text-gray-900">{systemInfo.ssh_service.host || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">端口:</span>
-                        <span className="ml-2 font-mono text-gray-900">{systemInfo.ssh_service.port || '-'}</span>
-                      </div>
+                    <div>
+                      <span className="text-gray-500">端口:</span>
+                      <span className="ml-2 font-mono text-gray-900">{systemInfo.ssh_service.port || '-'}</span>
                     </div>
+                    {systemInfo.ssh_service.public_key && (
+                      <div>
+                        <span className="text-gray-500">主机公钥:</span>
+                        <div className="mt-1 p-2 bg-gray-50 rounded border border-gray-200">
+                          <code className="text-xs font-mono text-gray-800 break-all">
+                            {systemInfo.ssh_service.public_key}
+                          </code>
+                          <button
+                            className="ml-2 text-xs text-blue-600 hover:text-blue-800"
+                            onClick={() => {
+                              navigator.clipboard.writeText(systemInfo.ssh_service.public_key)
+                              alert('公钥已复制到剪贴板')
+                            }}
+                          >
+                            复制
+                          </button>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          此公钥可用于新增资源时配置服务器的主机密钥验证
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

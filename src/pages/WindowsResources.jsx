@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ListFilter, Columns, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { showToast } from '@/utils/toast'
 
 const allColumns = ["name", "host", "port", "description", "role", "space", "createdAt", "status", "actions"]
 
@@ -61,11 +62,17 @@ export default function WindowsResources() {
   const [formData, setFormData] = useState({})
   const [spaces, setSpaces] = useState([])
   const [selectedSpace, setSelectedSpace] = useState('')
+  const [roles, setRoles] = useState([])
+  const [selectedRole, setSelectedRole] = useState('')
 
   useEffect(() => {
     loadResources()
-    loadSpaces()
   }, [page])
+
+  useEffect(() => {
+    loadSpaces()
+    loadRoles()
+  }, [])
 
   const loadResources = async () => {
     try {
@@ -103,6 +110,16 @@ export default function WindowsResources() {
     } catch (error) {
       console.error('加载空间列表失败:', error)
       setSpaces([])
+    }
+  }
+
+  const loadRoles = async () => {
+    try {
+      const data = await api.getRoles()
+      setRoles(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('加载角色列表失败:', error)
+      setRoles([])
     }
   }
 
@@ -250,9 +267,10 @@ export default function WindowsResources() {
       try {
         await api.deleteResource(resource.id, 'windows')
         await loadResources()
+        showToast('删除成功', 'success')
       } catch (error) {
         console.error('删除资源失败:', error)
-        alert('删除失败')
+        showToast('删除失败: ' + (error.message || '未知错误'), 'error')
       }
     }
   }
@@ -299,9 +317,11 @@ export default function WindowsResources() {
       setFormData({})
       setSelectedResource(null)
       setSelectedSpace('')
+      setSelectedRole('')
+      showToast('保存成功', 'success')
     } catch (error) {
       console.error('保存资源失败:', error)
-      alert('保存失败: ' + (error.message || '未知错误'))
+      showToast('保存失败: ' + (error.message || '未知错误'), 'error')
     }
   }
 
@@ -328,6 +348,7 @@ export default function WindowsResources() {
             const defaultSpace = spaces.find(s => s.name === 'default')
             setSelectedSpace(defaultSpace ? defaultSpace.id.toString() : spaces[0].id.toString())
           }
+          setSelectedRole('')
           setAddDialogOpen(true)
         }} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -625,9 +646,8 @@ export default function WindowsResources() {
                   </div>
                 ))
               })()}
-              {/* 空间选择 */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间与角色</h3>
                 <div className="grid grid-cols-4 gap-4">
                   <Label className="text-right pt-2">空间</Label>
                   <div className="col-span-3 space-y-1">
@@ -645,6 +665,24 @@ export default function WindowsResources() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">选择资源所属空间，不选择则使用默认空间</p>
                   </div>
                 </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <Label className="text-right pt-2">角色</Label>
+                  <div className="col-span-3 space-y-1">
+                    <select
+                      className="w-full px-3 py-2 border rounded-md bg-white"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                    >
+                      <option value="">请选择角色（可选）</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.name}>
+                          {role.name} - {role.desc || ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">为资源分配角色，用于权限控制</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -652,6 +690,7 @@ export default function WindowsResources() {
             <Button variant="outline" onClick={() => {
               setEditDialogOpen(false)
               setSelectedSpace('')
+              setSelectedRole('')
             }}>取消</Button>
             <Button onClick={handleSave}>保存</Button>
           </DialogFooter>
@@ -708,9 +747,8 @@ export default function WindowsResources() {
                 </div>
               ))
             })()}
-            {/* 空间选择 */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">空间与角色</h3>
               <div className="grid grid-cols-4 gap-4">
                 <Label className="text-right pt-2">空间</Label>
                 <div className="col-span-3 space-y-1">
@@ -728,6 +766,24 @@ export default function WindowsResources() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">选择资源所属空间，不选择则使用默认空间</p>
                 </div>
               </div>
+              <div className="grid grid-cols-4 gap-4">
+                <Label className="text-right pt-2">角色</Label>
+                <div className="col-span-3 space-y-1">
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                  >
+                    <option value="">请选择角色（可选）</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.name}>
+                        {role.name} - {role.desc || ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">为资源分配角色，用于权限控制</p>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -735,6 +791,7 @@ export default function WindowsResources() {
               setAddDialogOpen(false)
               setFormData({})
               setSelectedSpace('')
+              setSelectedRole('')
             }}>取消</Button>
             <Button onClick={handleSave}>创建</Button>
           </DialogFooter>

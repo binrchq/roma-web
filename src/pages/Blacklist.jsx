@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { logger } from '@/utils/logger'
+import { showToast } from '@/utils/toast'
 import { 
   Table, 
   TableBody, 
@@ -69,7 +70,7 @@ export default function Blacklist() {
       }
     } catch (error) {
       logger.error('加载黑名单失败:', error)
-      window.alert('加载黑名单失败')
+      showToast('加载黑名单失败', 'error')
       setBlacklists([])
       setTotal(0)
     } finally {
@@ -94,7 +95,7 @@ export default function Blacklist() {
 
   const handleCreateSubmit = async () => {
     if (!formData.ip) {
-      window.alert('请输入IP地址')
+      showToast('请输入IP地址', 'warning')
       return
     }
 
@@ -105,13 +106,13 @@ export default function Blacklist() {
         reason: formData.reason || '手动添加',
         duration: formData.duration || 0,
       })
-      window.alert('添加黑名单成功')
+      showToast('添加黑名单成功', 'success')
       setCreateDialogOpen(false)
       setFormData(initialFormState)
       loadBlacklists()
     } catch (error) {
       logger.error('添加黑名单失败:', error)
-      window.alert(error?.response?.data?.msg || error?.message || '添加黑名单失败')
+      showToast(error?.response?.data?.msg || error?.message || '添加黑名单失败', 'error')
     } finally {
       setFormSubmitting(false)
     }
@@ -157,11 +158,11 @@ export default function Blacklist() {
 
     try {
       await api.removeFromBlacklist(ip)
-      window.alert('解禁成功')
+      showToast('解禁成功', 'success')
       loadBlacklists()
     } catch (error) {
       logger.error('解禁失败:', error)
-      window.alert(error?.response?.data?.msg || error?.message || '解禁失败')
+      showToast(error?.response?.data?.msg || error?.message || '解禁失败', 'error')
     }
   }
 

@@ -17,6 +17,7 @@ const getCurrentUser = () => httpRequest('users/me', {}, 'GET', isShowInfoToast,
 const createUser = (data) => httpRequest('users', data, 'POST', isShowInfoToast, isPublicRequest)
 const updateUser = (id, data) => httpRequest(`users/${id}`, data, 'PUT', isShowInfoToast, isPublicRequest)
 const deleteUser = (id) => httpRequest(`users/${id}`, {}, 'DELETE', isShowInfoToast, isPublicRequest)
+const updateProfile = (data) => httpRequest('users/me', data, 'PUT', isShowInfoToast, isPublicRequest)
 
 // 角色相关
 const getRoles = () => httpRequest('roles', {}, 'GET', isShowInfoToast, isPublicRequest)
@@ -69,6 +70,7 @@ const deleteResource = (id, type) => {
     // 后端需要 { type: "linux", data: [{ id }] } 格式
     return httpRequest(`resources/${id}`, { type, data: [{ id }] }, 'DELETE', isShowInfoToast, isPublicRequest)
 }
+const getDatabaseTypes = () => httpRequest('resources/database-types', {}, 'GET', isShowInfoToast, isPublicRequest)
 
 // SSH 相关
 const executeCommand = (data) => httpRequest('ssh/execute', data, 'POST', isShowInfoToast, isPublicRequest)
@@ -124,6 +126,7 @@ export const api = {
     createUser,
     updateUser,
     deleteUser,
+    updateProfile,
 
     // 角色相关
     getRoles,
@@ -138,6 +141,7 @@ export const api = {
     createResource,
     updateResource,
     deleteResource,
+    getDatabaseTypes,
 
     // SSH 相关
     executeCommand,
@@ -162,16 +166,16 @@ export const api = {
     generateSSHKey,
 
     // 空间相关
-  getSpaces,
-  getSpaceById,
-  createSpace,
-  addSpaceMember,
-  removeSpaceMember,
-  getBlacklists,
-  getBlacklistByIP,
-  addToBlacklist,
-  removeFromBlacklist,
-  getIPInfo,
+    getSpaces,
+    getSpaceById,
+    createSpace,
+    addSpaceMember,
+    removeSpaceMember,
+    getBlacklists,
+    getBlacklistByIP,
+    addToBlacklist,
+    removeFromBlacklist,
+    getIPInfo,
 }
 
 export default api

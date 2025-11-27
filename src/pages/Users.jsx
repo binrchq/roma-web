@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Columns } from 'lucide-react'
 import { logger } from '@/utils/logger'
+import { showToast } from '@/utils/toast'
 
 const allColumns = ["username", "email", "name", "roles", "createdAt", "status", "actions"]
 const initialFormState = {
@@ -225,11 +226,11 @@ export default function Users() {
       if (result && typeof result === 'object' && result.warning) {
         await loadUsers()
         closeCreateDialog()
-        window.alert(`用户创建成功，但有警告：${result.warning}`)
+        showToast(`用户创建成功，但有警告：${result.warning}`, 'warning')
       } else {
         await loadUsers()
         closeCreateDialog()
-        window.alert('用户创建成功')
+        showToast('用户创建成功', 'success')
       }
     } catch (error) {
       logger.error('创建用户失败:', error)
@@ -239,7 +240,7 @@ export default function Users() {
       } catch (reloadError) {
         logger.error('刷新用户列表失败:', reloadError)
       }
-      window.alert(getErrorMessage(error))
+      showToast(getErrorMessage(error), 'error')
     } finally {
       setFormSubmitting(false)
     }
@@ -262,10 +263,10 @@ export default function Users() {
       await api.updateUser(selectedUser.id, payload)
       await loadUsers()
       closeEditDialog()
-      window.alert('用户更新成功')
+      showToast('用户更新成功', 'success')
     } catch (error) {
       logger.error('更新用户失败:', error)
-      window.alert(getErrorMessage(error))
+      showToast(getErrorMessage(error), 'error')
     } finally {
       setFormSubmitting(false)
     }
@@ -293,10 +294,10 @@ export default function Users() {
     try {
       await api.deleteUser(user.id)
       await loadUsers()
-      window.alert('用户已删除')
+      showToast('用户已删除', 'success')
     } catch (error) {
       logger.error('删除用户失败:', error)
-      window.alert(getErrorMessage(error))
+      showToast(getErrorMessage(error), 'error')
     }
   }
 

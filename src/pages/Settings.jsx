@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { showToast } from '@/utils/toast'
 
 export default function Settings() {
   const [systemInfo, setSystemInfo] = useState(null)
@@ -59,19 +60,19 @@ export default function Settings() {
     try {
       const result = await api.createApiKey()
       if (result?.api_key) {
-        alert(`API Key创建成功: ${result.api_key}\n请妥善保管，此密钥只显示一次！`)
+        showToast(`API Key创建成功: ${result.api_key}`, 'success')
         setShowCreateDialog(false)
         setNewKeyDescription('')
         loadApiKeys()
       } else if (result?.message) {
-        alert(`API Key创建成功: ${result.api_key || '请查看返回结果'}\n请妥善保管，此密钥只显示一次！`)
+        showToast(result.message, 'success')
         setShowCreateDialog(false)
         setNewKeyDescription('')
         loadApiKeys()
       }
     } catch (error) {
       console.error('创建API Key失败:', error)
-      alert('创建API Key失败: ' + (error.message || '未知错误'))
+      showToast('创建API Key失败: ' + (error.message || '未知错误'), 'error')
     }
   }
 
@@ -81,11 +82,11 @@ export default function Settings() {
     }
     try {
       await api.deleteApiKey(id)
-      alert('API Key删除成功')
+      showToast('API Key删除成功', 'success')
       loadApiKeys()
     } catch (error) {
       console.error('删除API Key失败:', error)
-      alert('删除API Key失败: ' + (error.message || '未知错误'))
+      showToast('删除API Key失败: ' + (error.message || '未知错误'), 'error')
     }
   }
 
@@ -182,7 +183,7 @@ export default function Settings() {
                             className="ml-2 text-xs text-blue-600 hover:text-blue-800"
                             onClick={() => {
                               navigator.clipboard.writeText(systemInfo.ssh_service.public_key)
-                              alert('公钥已复制到剪贴板')
+                              showToast('公钥已复制到剪贴板', 'success')
                             }}
                           >
                             复制

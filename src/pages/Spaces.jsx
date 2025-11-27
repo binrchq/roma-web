@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Plus, Users as UsersIcon, Trash2 } from 'lucide-react'
 import { logger } from '@/utils/logger'
+import { showToast } from '@/utils/toast'
 import {
   Table,
   TableBody,
@@ -150,10 +151,11 @@ export default function Spaces() {
         description: formData.description.trim() || '',
       })
       await loadSpaces()
+      showToast('空间创建成功', 'success')
       closeCreateDialog()
     } catch (error) {
       logger.error('创建空间失败:', error)
-      alert('创建失败: ' + (error.message || '未知错误'))
+      showToast('创建失败: ' + (error.message || '未知错误'), 'error')
     } finally {
       setFormSubmitting(false)
     }
@@ -161,7 +163,7 @@ export default function Spaces() {
 
   const handleAddMember = async () => {
     if (!memberFormData.user_id) {
-      alert('请选择用户')
+      showToast('请选择用户', 'warning')
       return
     }
 
@@ -182,15 +184,16 @@ export default function Spaces() {
         logger.error('重新加载空间详情失败:', reloadError)
         // 即使重新加载失败，也清空表单并提示用户手动刷新
         setMemberFormData({ user_id: '' })
-        alert('成员已添加，但刷新列表失败，请手动刷新页面')
+        showToast('成员已添加，但刷新列表失败，请手动刷新页面', 'warning')
       }
+      showToast('成员添加成功', 'success')
     } catch (error) {
       logger.error('添加成员失败:', error)
       // 检查是否是重复添加的错误
       if (error.message && error.message.includes('UNIQUE constraint') || error.message.includes('duplicate')) {
-        alert('该用户已经是空间成员')
+        showToast('该用户已经是空间成员', 'warning')
       } else {
-        alert('添加成员失败: ' + (error.message || '未知错误'))
+        showToast('添加成员失败: ' + (error.message || '未知错误'), 'error')
       }
     }
   }
@@ -210,7 +213,7 @@ export default function Spaces() {
       await loadSpaces()
     } catch (error) {
       logger.error('移除成员失败:', error)
-      alert('移除成员失败: ' + (error.message || '未知错误'))
+      showToast('移除成员失败: ' + (error.message || '未知错误'), 'error')
     }
   }
 

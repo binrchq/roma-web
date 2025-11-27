@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ListFilter, Columns, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { showToast } from '@/utils/toast'
 
 const resourceTypes = [
   { value: 'linux', label: 'Linux 服务器' },
@@ -313,9 +314,10 @@ export default function Resources() {
       try {
         await api.deleteResource(resource.id, resource.type)
         await loadResources()
+        showToast('删除成功', 'success')
       } catch (error) {
         console.error('删除资源失败:', error)
-        alert('删除失败')
+        showToast('删除失败: ' + (error.message || '未知错误'), 'error')
       }
     }
   }
@@ -394,9 +396,10 @@ export default function Resources() {
       setSelectedResource(null)
       setSelectedType('')
       setSelectedRole('')
+      showToast('保存成功', 'success')
     } catch (error) {
       console.error('保存资源失败:', error)
-      alert('保存失败: ' + (error.message || '未知错误'))
+      showToast('保存失败: ' + (error.message || '未知错误'), 'error')
     }
   }
 
@@ -413,6 +416,16 @@ export default function Resources() {
   }
 
   const renderField = (field, value) => {
+    if (field.key === 'private_key') {
+      const resourceData = selectedResource?.resource || selectedResource
+      if (resourceData?.private_key_masked) {
+        return resourceData.private_key_masked
+      }
+      if (resourceData?.has_private_key) {
+        return '已配置'
+      }
+      return '未配置'
+    }
     if (field.type === 'password' && value) {
       return '••••••••'
     }

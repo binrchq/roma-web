@@ -3,6 +3,7 @@ import * as React from 'react'
 import { api } from '../api/roma'
 import { isProduction } from '@/utils/env'
 import { logger } from '@/utils/logger'
+import { showToast } from '@/utils/toast'
 import RomaLogo from "@/components/ui/roma-logo"
 import {
   Sidebar,
@@ -368,12 +369,28 @@ function UserMenu({ username, email }) {
   const [newPublicKey, setNewPublicKey] = React.useState('')
   const [newPrivateKey, setNewPrivateKey] = React.useState('')
   const [generatedKey, setGeneratedKey] = React.useState(null)
+  const [profileForm, setProfileForm] = React.useState({
+    name: '',
+    nickname: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
+  const [profileSubmitting, setProfileSubmitting] = React.useState(false)
 
   const loadUserInfo = async () => {
     try {
       const data = await api.getCurrentUser()
       const user = data?.user || data
       setUserInfo(user)
+      setProfileForm((prev) => ({
+        ...prev,
+        name: user.name || '',
+        nickname: user.nickname || '',
+        email: user.email || '',
+        password: '',
+        confirmPassword: '',
+      }))
 
       // 加载SSH密钥
       try {
@@ -397,11 +414,11 @@ function UserMenu({ username, email }) {
 
   const handleUploadPublicKey = async () => {
     if (!newPublicKey.trim()) {
-      alert('请输入公钥')
+      showToast('请输入公钥', 'warning')
       return
     }
     if (!newPrivateKey.trim()) {
-      alert('请输入私钥（PEM 格式）')
+      showToast('请输入私钥（PEM 格式）', 'warning')
       return
     }
     try {
@@ -409,14 +426,14 @@ function UserMenu({ username, email }) {
         public_key: newPublicKey.trim(),
         private_key: newPrivateKey.trim()
       })
-      alert('SSH密钥上传成功')
+      showToast('SSH密钥上传成功', 'success')
       setShowPublicKeyDialog(false)
       setNewPublicKey('')
       setNewPrivateKey('')
       loadUserInfo()
     } catch (error) {
       logger.error('上传SSH密钥失败:', error)
-      alert('上传SSH密钥失败: ' + (error.message || '未知错误'))
+      showToast('上传SSH密钥失败: ' + (error.message || '未知错误'), 'error')
     }
   }
 
@@ -433,13 +450,13 @@ function UserMenu({ username, email }) {
       }
     } catch (error) {
       logger.error('生成SSH密钥失败:', error)
-      alert('生成SSH密钥失败: ' + (error.message || '未知错误'))
+      showToast('生成SSH密钥失败: ' + (error.message || '未知错误'), 'error')
     }
   }
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
-    alert('已复制到剪贴板')
+    showToast('已复制到剪贴板', 'success')
   }
 
   const downloadPrivateKey = (privateKeyPEM, filename = 'id_rsa') => {
@@ -456,7 +473,56 @@ function UserMenu({ username, email }) {
       URL.revokeObjectURL(url)
     } catch (error) {
       logger.error('下载私钥失败:', error)
-      alert('下载私钥失败: ' + (error.message || '未知错误'))
+      showToast('下载私钥失败: ' + (error.message || '未知错误'), 'error')
+    }
+  }
+
+  const handleProfileChange = (field, value) => {
+    setProfileForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  const handleUpdateProfile = async () => {
+    if (!userInfo) {
+      return
+    }
+    if (profileForm.password && profileForm.password !== profileForm.confirmPassword) {
+      showToast('两次输入的密码不一致', 'warning')
+      return
+    }
+    const payload = {}
+    if (profileForm.name && profileForm.name !== userInfo.name) {
+      payload.name = profileForm.name
+    }
+    if (profileForm.nickname && profileForm.nickname !== userInfo.nickname) {
+      payload.nickname = profileForm.nickname
+    }
+    if (profileForm.email && profileForm.email !== userInfo.email) {
+      payload.email = profileForm.email
+    }
+    if (profileForm.password) {
+      payload.password = profileForm.password
+    }
+    if (Object.keys(payload).length === 0) {
+      showToast('请先修改信息后再保存', 'warning')
+      return
+    }
+    try {
+      setProfileSubmitting(true)
+      await api.updateProfile(payload)
+      showToast('资料更新成功', 'success')
+      setProfileForm((prev) => ({
+        ...prev,
+        password: '',
+        confirmPassword: '',
+      }))
+      loadUserInfo()
+    } catch (error) {
+      showToast(error?.message || '资料更新失败', 'error')
+    } finally {
+      setProfileSubmitting(false)
     }
   }
 
@@ -559,6 +625,72 @@ function UserMenu({ username, email }) {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-gray-900">修改个人信息</h3>
+                  <Button
+                    size="sm"
+                    onClick={handleUpdateProfile}
+                    disabled={profileSubmitting}
+                  >
+                    {profileSubmitting ? '保存中...' : '保存变更'}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="profile-name">姓名</Label>
+                    <Input
+                      id="profile-name"
+                      value={profileForm.name}
+                      onChange={(e) => handleProfileChange('name', e.target.value)}
+                      placeholder="输入姓名"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="profile-nickname">昵称</Label>
+                    <Input
+                      id="profile-nickname"
+                      value={profileForm.nickname}
+                      onChange={(e) => handleProfileChange('nickname', e.target.value)}
+                      placeholder="输入昵称"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="profile-email">邮箱</Label>
+                    <Input
+                      id="profile-email"
+                      type="email"
+                      value={profileForm.email}
+                      onChange={(e) => handleProfileChange('email', e.target.value)}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="profile-password">新密码</Label>
+                    <Input
+                      id="profile-password"
+                      type="password"
+                      value={profileForm.password}
+                      onChange={(e) => handleProfileChange('password', e.target.value)}
+                      placeholder="不修改请留空"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="profile-confirm-password">确认新密码</Label>
+                    <Input
+                      id="profile-confirm-password"
+                      type="password"
+                      value={profileForm.confirmPassword}
+                      onChange={(e) => handleProfileChange('confirmPassword', e.target.value)}
+                      placeholder="再次输入新密码"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  注：如需修改密码，请输入新密码并确认；未填写则保持不变。
+                </p>
               </div>
             </div>
           )}

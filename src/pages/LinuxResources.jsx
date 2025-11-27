@@ -190,7 +190,15 @@ export default function LinuxResources() {
   const handleView = async (resource) => {
     try {
       const data = await api.getResourceById(resource.id, 'linux')
-      setSelectedResource(data)
+      // 后端返回的数据结构是 { resource: {...}, roles: [...], space: {...} }
+      // 为了兼容，如果 data.resource 存在则使用它，否则使用 data 本身
+      const resourceData = data.resource || data
+      setSelectedResource({
+        ...resourceData,
+        roles: data.roles || [],
+        role: data.role || null,
+        space: data.space || null
+      })
       setViewDialogOpen(true)
     } catch (error) {
       console.error('获取资源详情失败:', error)
@@ -202,13 +210,37 @@ export default function LinuxResources() {
   const handleEdit = async (resource) => {
     try {
       const data = await api.getResourceById(resource.id, 'linux')
-      setSelectedResource(data)
-      setFormData(data.resource || data)
+      // 后端返回的数据结构是 { resource: {...}, roles: [...], space: {...} }
+      const resourceData = data.resource || data
+      setSelectedResource({
+        ...resourceData,
+        roles: data.roles || [],
+        role: data.role || null,
+        space: data.space || null
+      })
+      setFormData(resourceData)
       // 设置角色信息
       if (data.role) {
         setSelectedRole(data.role.name || '')
+      } else if (data.roles && data.roles.length > 0) {
+        setSelectedRole(data.roles[0].name || '')
       } else {
         setSelectedRole('')
+      }
+      // 设置空间信息 - 优先使用返回的空间信息
+      if (data.space && data.space.id) {
+        setSelectedSpace(data.space.id.toString())
+      } else if (resource.space && resource.space.id) {
+        // 如果返回数据没有空间，尝试从 resource 对象中获取
+        setSelectedSpace(resource.space.id.toString())
+      } else {
+        // 如果都没有，使用默认空间
+        const defaultSpace = spaces.find(s => s.name === 'default')
+        if (defaultSpace) {
+          setSelectedSpace(defaultSpace.id.toString())
+        } else if (spaces.length > 0) {
+          setSelectedSpace(spaces[0].id.toString())
+        }
       }
       setEditDialogOpen(true)
     } catch (error) {
@@ -216,6 +248,17 @@ export default function LinuxResources() {
       setSelectedResource(resource)
       setFormData(resource)
       setSelectedRole('')
+      // 尝试从 resource 对象中获取空间信息
+      if (resource.space && resource.space.id) {
+        setSelectedSpace(resource.space.id.toString())
+      } else {
+        const defaultSpace = spaces.find(s => s.name === 'default')
+        if (defaultSpace) {
+          setSelectedSpace(defaultSpace.id.toString())
+        } else if (spaces.length > 0) {
+          setSelectedSpace(spaces[0].id.toString())
+        }
+      }
       setEditDialogOpen(true)
     }
   }
@@ -259,7 +302,13 @@ export default function LinuxResources() {
       }
 
       if (selectedResource) {
-        await api.updateResource(selectedResource.id, requestData)
+        // 获取资源ID，兼容不同的数据结构
+        const resourceId = selectedResource.id || (selectedResource.resource && selectedResource.resource.id) || formData.id
+        if (resourceId) {
+          await api.updateResource(resourceId, requestData)
+        } else {
+          throw new Error('无法获取资源ID')
+        }
       } else {
         await api.createResource(requestData)
       }
@@ -528,7 +577,7 @@ export default function LinuxResources() {
                       <div key={field.key} className="grid grid-cols-4 gap-4">
                         <Label className="text-right pt-2">{field.label}</Label>
                         <div className="col-span-3 text-sm space-y-1">
-                          <div>{renderField(field, selectedResource[field.key])}</div>
+                          <div>{renderField(field, selectedResource[field.key] || (selectedResource.resource && selectedResource.resource[field.key]))}</div>
                           {field.description && (
                             <p className="text-xs text-gray-500 dark:text-gray-400">{field.description}</p>
                           )}

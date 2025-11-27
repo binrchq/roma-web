@@ -39,21 +39,29 @@ const getResourceById = (id, type = '') => {
     return httpRequest(`resources/${id}`, params, 'GET', isShowInfoToast, isPublicRequest)
 }
 const createResource = (data) => {
-    // 后端需要 { type: "linux", role: "ops", data: [...] } 格式
-    const { type, role, ...resourceData } = data
+    // 后端需要 { type: "linux", role: "ops", space_id: 1, data: [...] } 格式
+    const { type, role, space_id, ...resourceData } = data
     const requestData = { type, data: [resourceData] }
     if (role) {
         requestData.role = role
     }
+    // space_id 应该在顶层，而不是在 data 数组中
+    if (space_id !== undefined && space_id !== null) {
+        requestData.space_id = space_id
+    }
     return httpRequest('resources', requestData, 'POST', isShowInfoToast, isPublicRequest)
 }
 const updateResource = (id, data) => {
-    // 后端需要 { type: "linux", role: "ops", data: [...] } 格式
-    const { type, role, ...resourceData } = data
+    // 后端需要 { type: "linux", role: "ops", space_id: 1, data: [...] } 格式
+    const { type, role, space_id, ...resourceData } = data
     resourceData.id = id
     const requestData = { type, data: [resourceData] }
     if (role) {
         requestData.role = role
+    }
+    // space_id 应该在顶层，而不是在 data 数组中
+    if (space_id !== undefined && space_id !== null) {
+        requestData.space_id = space_id
     }
     return httpRequest(`resources/${id}`, requestData, 'PUT', isShowInfoToast, isPublicRequest)
 }

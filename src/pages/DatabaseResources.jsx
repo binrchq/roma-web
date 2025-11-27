@@ -52,11 +52,11 @@ export default function DatabaseResources() {
   const [roleFilter, setRoleFilter] = useState("all")
   const [spaceFilter, setSpaceFilter] = useState("all")
   const [visibleColumns, setVisibleColumns] = useState(new Set(allColumns))
-  
+
   const [page, setPage] = useState(1)
   const [pageSize] = useState(10)
   const [total, setTotal] = useState(0)
-  
+
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -178,8 +178,8 @@ export default function DatabaseResources() {
 
       // 角色过滤
       const roleMatch = roleFilter === "all" ||
-        (resource.roles && Array.isArray(resource.roles) && 
-         resource.roles.some(r => r && r.name === roleFilter))
+        (resource.roles && Array.isArray(resource.roles) &&
+          resource.roles.some(r => r && r.name === roleFilter))
 
       // 空间过滤
       const spaceMatch = spaceFilter === "all" ||
@@ -187,7 +187,7 @@ export default function DatabaseResources() {
 
       return nameMatch && statusMatch && roleMatch && spaceMatch
     })
-    
+
     const start = (page - 1) * pageSize
     const end = start + pageSize
     setTotal(filtered.length)
@@ -299,7 +299,7 @@ export default function DatabaseResources() {
       const processedData = { ...formData }
       if (processedData.id) processedData.id = Number(processedData.id)
       if (processedData.port !== undefined && processedData.port !== '') processedData.port = Number(processedData.port)
-      
+
       // 构建请求数据，包含角色和空间信息
       const requestData = { ...processedData, type: 'database' }
       if (selectedRole) {
@@ -316,7 +316,7 @@ export default function DatabaseResources() {
           requestData.space_id = spaces[0].id
         }
       }
-      
+
       if (selectedResource) {
         // 获取资源ID，兼容不同的数据结构
         const resourceId = selectedResource.id || (selectedResource.resource && selectedResource.resource.id) || formData.id
@@ -591,7 +591,7 @@ export default function DatabaseResources() {
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-          
+
           {total > 0 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-600">

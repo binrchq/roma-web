@@ -12,6 +12,7 @@ import SwitchResources from './pages/SwitchResources'
 import Users from './pages/Users'
 import Roles from './pages/Roles'
 import Spaces from './pages/Spaces'
+import Blacklist from './pages/Blacklist'
 import Logs from './pages/Logs'
 import Settings from './pages/Settings'
 import ApiTutorial from './pages/ApiTutorial'
@@ -45,6 +46,7 @@ function App() {
           <Route path="users" element={<Users />} />
           <Route path="roles" element={<Roles />} />
           <Route path="spaces" element={<Spaces />} />
+          <Route path="blacklist" element={<Blacklist />} />
           <Route path="logs" element={<Logs />} />
           <Route path="settings" element={<Settings />} />
           <Route path="docs/api" element={<ApiTutorial />} />

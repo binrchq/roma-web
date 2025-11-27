@@ -45,6 +45,7 @@ import {
   Key,
   UserCircle,
   Folder,
+  Ban,
 } from "lucide-react"
 import { FaGithub } from "react-icons/fa"
 import { FaArrowCircleRight } from "react-icons/fa";
@@ -84,6 +85,7 @@ const getNavigation = (isSuper, isSystem) => [
     { name: '空间管理', href: '/spaces', icon: Folder },
     { name: '用户管理', href: '/users', icon: Users },
     { name: '角色管理', href: '/roles', icon: Shield },
+    { name: 'IP黑名单', href: '/blacklist', icon: Ban },
     { name: '审计日志', href: '/logs', icon: FileText },
   ] : []),
   { name: '系统设置', href: '/settings', icon: Settings },

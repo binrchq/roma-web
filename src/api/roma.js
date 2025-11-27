@@ -99,6 +99,16 @@ const createSpace = (data) => httpRequest('spaces', data, 'POST', isShowInfoToas
 const addSpaceMember = (id, data) => httpRequest(`spaces/${id}/members`, data, 'POST', isShowInfoToast, isPublicRequest)
 const removeSpaceMember = (id, data) => httpRequest(`spaces/${id}/members`, data, 'DELETE', isShowInfoToast, isPublicRequest)
 
+// 黑名单相关
+const getBlacklists = (page = 1, pageSize = 20) => {
+    const params = { page, page_size: pageSize }
+    return httpRequest('blacklist', params, 'GET', isShowInfoToast, isPublicRequest)
+}
+const getBlacklistByIP = (ip) => httpRequest(`blacklist/${ip}`, {}, 'GET', isShowInfoToast, isPublicRequest)
+const addToBlacklist = (data) => httpRequest('blacklist', data, 'POST', isShowInfoToast, isPublicRequest)
+const removeFromBlacklist = (ip) => httpRequest(`blacklist/${ip}`, {}, 'DELETE', isShowInfoToast, isPublicRequest)
+const getIPInfo = (ip) => httpRequest(`blacklist/ip-info/${ip}`, {}, 'GET', isShowInfoToast, isPublicRequest)
+
 export const api = {
     // 认证相关
     login,
@@ -152,11 +162,16 @@ export const api = {
     generateSSHKey,
 
     // 空间相关
-    getSpaces,
-    getSpaceById,
-    createSpace,
-    addSpaceMember,
-    removeSpaceMember,
+  getSpaces,
+  getSpaceById,
+  createSpace,
+  addSpaceMember,
+  removeSpaceMember,
+  getBlacklists,
+  getBlacklistByIP,
+  addToBlacklist,
+  removeFromBlacklist,
+  getIPInfo,
 }
 
 export default api
